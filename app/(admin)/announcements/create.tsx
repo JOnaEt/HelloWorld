@@ -130,7 +130,6 @@ export default function CreateAnnouncementScreen() {
         actionUrl: actionUrl.trim() || undefined,
         actionLabel: actionLabel.trim() || undefined,
         targetGroups: [],
-        readByUserIds: [],
         isPinned,
         tags: [type],
       });

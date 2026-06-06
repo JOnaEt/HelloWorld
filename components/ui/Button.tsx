@@ -1,23 +1,27 @@
 import React, { useCallback } from 'react';
 import {
   TouchableOpacity,
-  Text,
   StyleSheet,
   ActivityIndicator,
   ViewStyle,
   TextStyle,
+  View,
+  Text,
 } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
 } from 'react-native-reanimated';
-import { Colors } from '../../constants/colors';
-import { FontSizes, FontWeights } from '../../constants/fonts';
-import { BorderRadius, Spacing, Shadows } from '../../constants/layout';
+import { Colors } from '../../src/design-system/colors';
+import { Typography } from '../../src/design-system/typography';
+import { Spacing } from '../../src/design-system/spacing';
+import { Radius } from '../../src/design-system/radius';
+import { Shadows } from '../../src/design-system/shadows';
+import { SpringPresets } from '../../src/design-system/animations';
 
-type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'outline';
-type ButtonSize = 'sm' | 'md' | 'lg';
+export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'outline';
+export type ButtonSize = 'sm' | 'md' | 'lg';
 
 interface ButtonProps {
   title: string;
@@ -26,8 +30,8 @@ interface ButtonProps {
   size?: ButtonSize;
   isLoading?: boolean;
   disabled?: boolean;
-  icon?: React.ReactNode;
-  iconPosition?: 'left' | 'right';
+  leadingIcon?: React.ReactNode;
+  trailingIcon?: React.ReactNode;
   style?: ViewStyle;
   textStyle?: TextStyle;
   fullWidth?: boolean;
@@ -43,8 +47,8 @@ export function Button({
   size = 'md',
   isLoading = false,
   disabled = false,
-  icon,
-  iconPosition = 'left',
+  leadingIcon,
+  trailingIcon,
   style,
   textStyle,
   fullWidth = false,
@@ -57,28 +61,28 @@ export function Button({
   }));
 
   const handlePressIn = useCallback(() => {
-    scale.value = withSpring(0.96, { damping: 20, stiffness: 300 });
-  }, []);
+    scale.value = withSpring(0.97, SpringPresets.snappy);
+  }, [scale]);
 
   const handlePressOut = useCallback(() => {
-    scale.value = withSpring(1, { damping: 20, stiffness: 300 });
-  }, []);
+    scale.value = withSpring(1, SpringPresets.bouncy);
+  }, [scale]);
 
-  const containerStyle = [
+  const containerStyle: ViewStyle[] = [
     styles.base,
-    styles[variant],
-    styles[size],
-    fullWidth && styles.fullWidth,
-    (disabled || isLoading) && styles.disabled,
-    variant === 'primary' && Shadows.primary,
-    style,
+    styles[`variant_${variant}`],
+    styles[`size_${size}`],
+    fullWidth ? styles.fullWidth : {},
+    (disabled || isLoading) ? styles.disabled : {},
+    variant === 'primary' ? (Shadows.brand as ViewStyle) : {},
+    style ?? {},
   ];
 
-  const titleStyle = [
+  const titleStyle: TextStyle[] = [
     styles.text,
-    styles[`${variant}Text`],
-    styles[`${size}Text`],
-    textStyle,
+    styles[`text_${variant}`],
+    styles[`textSize_${size}`],
+    textStyle ?? {},
   ];
 
   return (
@@ -94,14 +98,14 @@ export function Button({
     >
       {isLoading ? (
         <ActivityIndicator
-          color={variant === 'primary' ? Colors.white : Colors.primary}
+          color={variant === 'primary' || variant === 'danger' ? Colors.text.inverse : Colors.brand.primary}
           size="small"
         />
       ) : (
         <>
-          {icon && iconPosition === 'left' && icon}
+          {leadingIcon && <View style={styles.iconWrapper}>{leadingIcon}</View>}
           <Text style={titleStyle}>{title}</Text>
-          {icon && iconPosition === 'right' && icon}
+          {trailingIcon && <View style={styles.iconWrapper}>{trailingIcon}</View>}
         </>
       )}
     </AnimatedTouchable>
@@ -113,8 +117,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: BorderRadius.xl,
-    gap: Spacing.sm,
+    borderRadius: Radius.button,
+    gap: Spacing.iconGap,
   },
   fullWidth: {
     width: '100%',
@@ -122,67 +126,73 @@ const styles = StyleSheet.create({
   disabled: {
     opacity: 0.5,
   },
+  iconWrapper: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 
   // Variants
-  primary: {
-    backgroundColor: Colors.primary,
+  variant_primary: {
+    backgroundColor: Colors.brand.primary,
   },
-  secondary: {
-    backgroundColor: Colors.light,
+  variant_secondary: {
+    backgroundColor: Colors.brand.light,
   },
-  ghost: {
+  variant_ghost: {
     backgroundColor: 'transparent',
   },
-  danger: {
-    backgroundColor: Colors.error,
+  variant_danger: {
+    backgroundColor: Colors.status.error,
   },
-  outline: {
+  variant_outline: {
     backgroundColor: 'transparent',
     borderWidth: 1.5,
-    borderColor: Colors.primary,
+    borderColor: Colors.brand.primary,
   },
 
   // Sizes
-  sm: {
-    paddingVertical: Spacing[2],
-    paddingHorizontal: Spacing[4],
-    borderRadius: BorderRadius.md,
+  size_sm: {
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.md,
+    borderRadius: Radius.sm,
   },
-  md: {
-    paddingVertical: Spacing[3] + 2,
-    paddingHorizontal: Spacing[6],
+  size_md: {
+    paddingVertical: 14,
+    paddingHorizontal: Spacing.lg,
   },
-  lg: {
-    paddingVertical: Spacing[4],
-    paddingHorizontal: Spacing[8],
+  size_lg: {
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.xl,
   },
 
   // Text
   text: {
+    ...Typography.button,
+  },
+  text_primary: {
+    color: Colors.text.inverse,
+  },
+  text_secondary: {
+    color: Colors.brand.primary,
+  },
+  text_ghost: {
+    color: Colors.brand.primary,
+  },
+  text_danger: {
+    color: Colors.text.inverse,
+  },
+  text_outline: {
+    color: Colors.brand.primary,
+  },
+  textSize_sm: {
+    ...Typography.buttonSm,
+  },
+  textSize_md: {
+    ...Typography.button,
+  },
+  textSize_lg: {
+    fontSize: 17,
+    fontWeight: '600',
     letterSpacing: 0.3,
   },
-  primaryText: {
-    color: Colors.white,
-    fontWeight: FontWeights.semibold,
-  },
-  secondaryText: {
-    color: Colors.primary,
-    fontWeight: FontWeights.semibold,
-  },
-  ghostText: {
-    color: Colors.primary,
-    fontWeight: FontWeights.medium,
-  },
-  dangerText: {
-    color: Colors.white,
-    fontWeight: FontWeights.semibold,
-  },
-  outlineText: {
-    color: Colors.primary,
-    fontWeight: FontWeights.semibold,
-  },
-
-  smText: { fontSize: FontSizes.sm },
-  mdText: { fontSize: FontSizes.base },
-  lgText: { fontSize: FontSizes.lg },
 });
