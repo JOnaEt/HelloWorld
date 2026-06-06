@@ -1,0 +1,421 @@
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Alert,
+} from 'react-native';
+import { router } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Colors } from '../../constants/colors';
+import { FontSizes, FontWeights } from '../../constants/fonts';
+import { Spacing, BorderRadius, Shadows } from '../../constants/layout';
+import { Avatar } from '../../components/ui/Avatar';
+import { Badge } from '../../components/ui/Badge';
+import { ProgressBar, CircularProgress } from '../../components/ui/ProgressBar';
+import { useAuth } from '../../hooks/useAuth';
+import { formatNumber, formatCurrency } from '../../utils/format';
+import { formatDate } from '../../utils/date';
+
+export default function ProfileScreen() {
+  const insets = useSafeAreaInsets();
+  const { user, logout } = useAuth();
+
+  if (!user) return null;
+
+  const growthScore = user.spiritualGrowthScore;
+  const growthProgress = Math.min(growthScore / 1000, 1);
+
+  const handleLogout = () => {
+    Alert.alert(
+      'Sign Out',
+      'Are you sure you want to sign out?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Sign Out', style: 'destructive', onPress: logout },
+      ]
+    );
+  };
+
+  const stats = [
+    { label: 'Devotionals', value: user.stats.totalDevotionalsRead, icon: 'book-outline', color: Colors.primary },
+    { label: 'Listened', value: user.stats.totalDevotionalsListened, icon: 'headset-outline', color: '#0EA5E9' },
+    { label: 'Prayers', value: user.stats.totalPrayersSubmitted, icon: 'hand-right-outline', color: '#8B5CF6' },
+    { label: 'Streak', value: user.stats.currentStreak, icon: 'flame-outline', color: '#F59E0B', suffix: 'd' },
+  ];
+
+  const menuItems = [
+    { icon: 'person-outline', label: 'Edit Profile', onPress: () => {} },
+    { icon: 'notifications-outline', label: 'Notification Settings', onPress: () => {} },
+    { icon: 'shield-outline', label: 'Privacy & Security', onPress: () => {} },
+    { icon: 'help-circle-outline', label: 'Help & Support', onPress: () => {} },
+    { icon: 'information-circle-outline', label: 'About TOPIC Digital', onPress: () => {} },
+  ];
+
+  return (
+    <View style={[styles.container, { paddingTop: insets.top }]}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+        {/* Profile Header */}
+        <LinearGradient
+          colors={Colors.gradientPrimary}
+          style={styles.profileHeader}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        >
+          <View style={styles.profileHeaderInner}>
+            <Avatar uri={user.photoURL} name={user.displayName} size="2xl" showBorder />
+            <View style={styles.profileInfo}>
+              <Text style={styles.profileName}>{user.displayName}</Text>
+              <Text style={styles.profileEmail}>{user.email}</Text>
+              <View style={styles.roleBadge}>
+                <Badge
+                  label={user.role.charAt(0).toUpperCase() + user.role.slice(1)}
+                  variant="primary"
+                  size="sm"
+                />
+              </View>
+            </View>
+          </View>
+          <Text style={styles.joinDate}>
+            Member since {formatDate(user.joinedAt, { month: 'long', year: 'numeric' })}
+          </Text>
+        </LinearGradient>
+
+        {/* Spiritual Growth Ring */}
+        <View style={styles.growthCard}>
+          <View style={styles.growthLeft}>
+            <CircularProgress
+              progress={growthProgress}
+              size={90}
+              strokeWidth={8}
+              color={Colors.primary}
+              trackColor={Colors.light}
+            >
+              <Text style={styles.growthScore}>{growthScore}</Text>
+              <Text style={styles.growthScoreLabel}>pts</Text>
+            </CircularProgress>
+          </View>
+          <View style={styles.growthRight}>
+            <Text style={styles.growthTitle}>Spiritual Growth</Text>
+            <Text style={styles.growthSubtitle}>
+              {growthScore < 100
+                ? 'Just getting started! Keep exploring.'
+                : growthScore < 300
+                ? 'Growing in faith steadily.'
+                : growthScore < 600
+                ? 'Making great progress!'
+                : 'Outstanding spiritual growth!'}
+            </Text>
+            <View style={styles.growthBar}>
+              <ProgressBar progress={growthProgress} height={6} />
+              <Text style={styles.growthNext}>
+                {Math.max(0, 1000 - growthScore)} pts to next level
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Stats Grid */}
+        <View style={styles.statsGrid}>
+          {stats.map((stat, i) => (
+            <View key={i} style={styles.statItem}>
+              <View style={[styles.statIconBox, { backgroundColor: stat.color + '20' }]}>
+                <Ionicons name={stat.icon as any} size={18} color={stat.color} />
+              </View>
+              <Text style={styles.statValue}>
+                {formatNumber(stat.value)}{stat.suffix ?? ''}
+              </Text>
+              <Text style={styles.statLabel}>{stat.label}</Text>
+            </View>
+          ))}
+        </View>
+
+        {/* Giving Summary */}
+        <View style={styles.givingCard}>
+          <View style={styles.givingHeader}>
+            <Ionicons name="heart" size={18} color={Colors.error} />
+            <Text style={styles.givingTitle}>Your Giving</Text>
+          </View>
+          <View style={styles.givingStats}>
+            <View style={styles.givingStat}>
+              <Text style={styles.givingValue}>$0.00</Text>
+              <Text style={styles.givingLabel}>This Month</Text>
+            </View>
+            <View style={styles.givingStat}>
+              <Text style={styles.givingValue}>$0.00</Text>
+              <Text style={styles.givingLabel}>This Year</Text>
+            </View>
+            <TouchableOpacity
+              style={styles.givingBtn}
+              onPress={() => router.push('/giving/')}
+            >
+              <Text style={styles.givingBtnText}>Give Now</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Menu */}
+        <View style={styles.menuSection}>
+          {menuItems.map((item, i) => (
+            <TouchableOpacity
+              key={i}
+              style={[
+                styles.menuItem,
+                i < menuItems.length - 1 && styles.menuItemBorder,
+              ]}
+              onPress={item.onPress}
+              activeOpacity={0.7}
+            >
+              <View style={styles.menuLeft}>
+                <View style={styles.menuIconBox}>
+                  <Ionicons name={item.icon as any} size={20} color={Colors.primary} />
+                </View>
+                <Text style={styles.menuLabel}>{item.label}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={Colors.gray400} />
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* Sign out */}
+        <TouchableOpacity style={styles.signOutBtn} onPress={handleLogout}>
+          <Ionicons name="log-out-outline" size={20} color={Colors.error} />
+          <Text style={styles.signOutText}>Sign Out</Text>
+        </TouchableOpacity>
+
+        <Text style={styles.version}>TOPIC Digital v1.0.0</Text>
+      </ScrollView>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: Colors.background,
+  },
+  scrollContent: {
+    paddingBottom: Spacing['3xl'],
+  },
+  profileHeader: {
+    padding: Spacing[5],
+    paddingTop: Spacing[4],
+    gap: Spacing[4],
+  },
+  profileHeaderInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing[4],
+  },
+  profileInfo: {
+    flex: 1,
+    gap: 4,
+  },
+  profileName: {
+    fontSize: FontSizes['2xl'],
+    fontWeight: FontWeights.black,
+    color: Colors.white,
+  },
+  profileEmail: {
+    fontSize: FontSizes.sm,
+    color: 'rgba(255,255,255,0.8)',
+  },
+  roleBadge: {
+    marginTop: 4,
+  },
+  joinDate: {
+    fontSize: FontSizes.xs,
+    color: 'rgba(255,255,255,0.7)',
+    textAlign: 'center',
+  },
+  growthCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.card,
+    margin: Spacing[5],
+    borderRadius: BorderRadius['2xl'],
+    padding: Spacing[4],
+    gap: Spacing[4],
+    ...(Shadows.base as object),
+  },
+  growthLeft: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  growthScore: {
+    fontSize: FontSizes.lg,
+    fontWeight: FontWeights.bold,
+    color: Colors.textPrimary,
+  },
+  growthScoreLabel: {
+    fontSize: FontSizes.xs,
+    color: Colors.textSecondary,
+  },
+  growthRight: {
+    flex: 1,
+    gap: Spacing[2],
+  },
+  growthTitle: {
+    fontSize: FontSizes.md,
+    fontWeight: FontWeights.bold,
+    color: Colors.textPrimary,
+  },
+  growthSubtitle: {
+    fontSize: FontSizes.xs,
+    color: Colors.textSecondary,
+    lineHeight: 16,
+  },
+  growthBar: {
+    gap: 4,
+  },
+  growthNext: {
+    fontSize: FontSizes.xs,
+    color: Colors.primary,
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    paddingHorizontal: Spacing[5],
+    gap: Spacing[3],
+    marginBottom: Spacing[4],
+  },
+  statItem: {
+    flex: 1,
+    alignItems: 'center',
+    backgroundColor: Colors.card,
+    borderRadius: BorderRadius.xl,
+    padding: Spacing[3],
+    gap: Spacing[1],
+    ...(Shadows.sm as object),
+  },
+  statIconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: BorderRadius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 2,
+  },
+  statValue: {
+    fontSize: FontSizes.md,
+    fontWeight: FontWeights.bold,
+    color: Colors.textPrimary,
+  },
+  statLabel: {
+    fontSize: 10,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+  },
+  givingCard: {
+    backgroundColor: Colors.card,
+    marginHorizontal: Spacing[5],
+    marginBottom: Spacing[4],
+    borderRadius: BorderRadius['2xl'],
+    padding: Spacing[4],
+    gap: Spacing[3],
+    ...(Shadows.sm as object),
+  },
+  givingHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing[2],
+  },
+  givingTitle: {
+    fontSize: FontSizes.md,
+    fontWeight: FontWeights.bold,
+    color: Colors.textPrimary,
+  },
+  givingStats: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing[4],
+  },
+  givingStat: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  givingValue: {
+    fontSize: FontSizes.lg,
+    fontWeight: FontWeights.bold,
+    color: Colors.textPrimary,
+  },
+  givingLabel: {
+    fontSize: FontSizes.xs,
+    color: Colors.textSecondary,
+  },
+  givingBtn: {
+    backgroundColor: Colors.primary,
+    paddingVertical: Spacing[3],
+    paddingHorizontal: Spacing[4],
+    borderRadius: BorderRadius.full,
+  },
+  givingBtnText: {
+    fontSize: FontSizes.sm,
+    fontWeight: FontWeights.semibold,
+    color: Colors.white,
+  },
+  menuSection: {
+    marginHorizontal: Spacing[5],
+    marginBottom: Spacing[4],
+    backgroundColor: Colors.card,
+    borderRadius: BorderRadius['2xl'],
+    overflow: 'hidden',
+    ...(Shadows.sm as object),
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: Spacing[4],
+    paddingHorizontal: Spacing[4],
+  },
+  menuItemBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  menuLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing[3],
+  },
+  menuIconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: BorderRadius.md,
+    backgroundColor: Colors.light,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  menuLabel: {
+    fontSize: FontSizes.base,
+    fontWeight: FontWeights.medium,
+    color: Colors.textPrimary,
+  },
+  signOutBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing[2],
+    marginHorizontal: Spacing[5],
+    paddingVertical: Spacing[4],
+    borderRadius: BorderRadius.xl,
+    backgroundColor: '#FEE2E2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    marginBottom: Spacing[4],
+  },
+  signOutText: {
+    fontSize: FontSizes.base,
+    fontWeight: FontWeights.semibold,
+    color: Colors.error,
+  },
+  version: {
+    fontSize: FontSizes.xs,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: Spacing[4],
+  },
+});
