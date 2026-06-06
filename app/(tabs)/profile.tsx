@@ -181,6 +181,30 @@ export default function ProfileScreen() {
           ))}
         </View>
 
+        {/* Admin Panel - only visible for admin/pastor/leader roles */}
+        {(user.role === 'admin' || user.role === 'pastor' || user.role === 'leader') && (
+          <TouchableOpacity
+            style={styles.adminPanelBtn}
+            onPress={() => router.push('/(admin)' as Parameters<typeof router.push>[0])}
+            activeOpacity={0.8}
+          >
+            <View style={styles.adminPanelLeft}>
+              <View style={styles.adminPanelIconBox}>
+                <Ionicons name="shield-checkmark" size={22} color={Colors.white} />
+              </View>
+              <View>
+                <Text style={styles.adminPanelLabel}>Admin Panel</Text>
+                <Text style={styles.adminPanelSub}>Manage church content & members</Text>
+              </View>
+            </View>
+            <View style={styles.adminRoleBadge}>
+              <Text style={styles.adminRoleBadgeText}>
+                {user.role.toUpperCase()}
+              </Text>
+            </View>
+          </TouchableOpacity>
+        )}
+
         {/* Sign out */}
         <TouchableOpacity style={styles.signOutBtn} onPress={handleLogout}>
           <Ionicons name="log-out-outline" size={20} color={Colors.error} />
@@ -393,6 +417,53 @@ const styles = StyleSheet.create({
     fontSize: FontSizes.base,
     fontWeight: FontWeights.medium,
     color: Colors.textPrimary,
+  },
+  adminPanelBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginHorizontal: Spacing[5],
+    marginBottom: Spacing[4],
+    paddingVertical: Spacing[4],
+    paddingHorizontal: Spacing[4],
+    borderRadius: BorderRadius.xl,
+    backgroundColor: Colors.primary,
+    ...(Shadows.base as object),
+  },
+  adminPanelLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing[3],
+    flex: 1,
+  },
+  adminPanelIconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: BorderRadius.md,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  adminPanelLabel: {
+    fontSize: FontSizes.base,
+    fontWeight: FontWeights.bold,
+    color: Colors.white,
+  },
+  adminPanelSub: {
+    fontSize: FontSizes.xs,
+    color: 'rgba(255,255,255,0.8)',
+  },
+  adminRoleBadge: {
+    backgroundColor: 'rgba(255,255,255,0.25)',
+    paddingHorizontal: Spacing[3],
+    paddingVertical: Spacing[1],
+    borderRadius: BorderRadius.full,
+  },
+  adminRoleBadgeText: {
+    fontSize: FontSizes.xs,
+    fontWeight: FontWeights.bold,
+    color: Colors.white,
+    letterSpacing: 0.8,
   },
   signOutBtn: {
     flexDirection: 'row',

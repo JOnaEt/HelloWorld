@@ -91,6 +91,10 @@ export default function RootLayout() {
             name="announcements/index"
             options={{ animation: 'slide_from_right' }}
           />
+          <Stack.Screen
+            name="(admin)"
+            options={{ headerShown: false, animation: 'slide_from_right' }}
+          />
           <Stack.Screen name="+not-found" />
         </Stack>
       </SafeAreaProvider>
