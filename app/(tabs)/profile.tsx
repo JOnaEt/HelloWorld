@@ -138,24 +138,11 @@ export default function ProfileScreen() {
         <View style={styles.givingCard}>
           <View style={styles.givingHeader}>
             <Ionicons name="heart" size={18} color={Colors.error} />
-            <Text style={styles.givingTitle}>Your Giving</Text>
+            <Text style={styles.givingTitle}>Digital Giving</Text>
           </View>
-          <View style={styles.givingStats}>
-            <View style={styles.givingStat}>
-              <Text style={styles.givingValue}>$0.00</Text>
-              <Text style={styles.givingLabel}>This Month</Text>
-            </View>
-            <View style={styles.givingStat}>
-              <Text style={styles.givingValue}>$0.00</Text>
-              <Text style={styles.givingLabel}>This Year</Text>
-            </View>
-            <TouchableOpacity
-              style={styles.givingBtn}
-              onPress={() => router.push('/giving/')}
-            >
-              <Text style={styles.givingBtnText}>Give Now</Text>
-            </TouchableOpacity>
-          </View>
+          <Text style={styles.givingComingSoon}>
+            Online giving coming soon. Give in person or contact the church office.
+          </Text>
         </View>
 
         {/* Menu */}
@@ -380,6 +367,12 @@ const styles = StyleSheet.create({
     fontSize: FontSizes.sm,
     fontWeight: FontWeights.semibold,
     color: Colors.white,
+  },
+  givingComingSoon: {
+    fontSize: FontSizes.sm,
+    color: Colors.textSecondary,
+    lineHeight: 20,
+    marginTop: Spacing[2],
   },
   menuSection: {
     marginHorizontal: Spacing[5],

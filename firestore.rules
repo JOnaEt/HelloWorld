@@ -44,8 +44,12 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       // Only the user can create their own profile
       allow create: if isAuthenticated() && isOwner(userId);
-      // User can update their own profile; admins can update any profile (role changes)
-      allow update: if isAuthenticated() && (isOwner(userId) || isAdmin());
+      // User can update their own profile (excluding role); admins can update any field
+      allow update: if isAuthenticated() && (
+        (isOwner(userId) &&
+         !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role'])) ||
+        isAdmin()
+      );
       // Only admins can delete accounts
       allow delete: if isAdmin();
     }

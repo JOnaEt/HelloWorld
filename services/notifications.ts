@@ -81,9 +81,16 @@ export async function requestNotificationPermissions(): Promise<boolean> {
 
 export async function getExpoPushToken(): Promise<string | null> {
   try {
-    const token = await Notifications.getExpoPushTokenAsync({
-      projectId: 'topic-digital-church-app',
-    });
+    // projectId must be the EAS UUID from the Expo dashboard, set in app.json
+    // under extra.eas.projectId. The slug 'topic-digital-church-app' is NOT valid here.
+    const { default: Constants } = await import('expo-constants');
+    const projectId: string | undefined =
+      Constants.expoConfig?.extra?.eas?.projectId;
+    if (!projectId || projectId === 'topic-digital-church-app') {
+      console.warn('Push notifications: set a valid EAS UUID in app.json extra.eas.projectId');
+      return null;
+    }
+    const token = await Notifications.getExpoPushTokenAsync({ projectId });
     return token.data;
   } catch {
     return null;

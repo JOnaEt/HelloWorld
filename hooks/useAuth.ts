@@ -1,6 +1,10 @@
 import { useCallback } from 'react';
 import { router } from 'expo-router';
 import { useAuthStore } from '../store/authStore';
+import { useDevotionalStore } from '../store/devotionalStore';
+import { useGroupStore } from '../store/groupStore';
+import { usePrayerStore } from '../store/prayerStore';
+import { useAdminStore } from '../store/adminStore';
 import {
   signIn,
   signUp,
@@ -68,6 +72,22 @@ export function useAuth() {
     try {
       await signOut();
       setUser(null);
+      // Clear all per-user store data so the next user starts fresh
+      useDevotionalStore.setState({
+        currentDevotional: null, dailyDevotional: null,
+        devotionals: [], filteredDevotionals: [], recentlyListened: [],
+      });
+      useGroupStore.setState({
+        groups: [], filteredGroups: [], myGroups: [], currentGroup: null,
+        currentGroupMembers: [], joinedGroupIds: [], featuredGroups: [],
+      });
+      usePrayerStore.setState({
+        prayers: [], answeredPrayers: [], myPrayers: [], currentPrayer: null,
+      });
+      useAdminStore.setState({
+        users: [], devotionals: [], announcements: [], groups: [],
+        prayers: [], donations: [], stats: null,
+      });
       router.replace('/(auth)/welcome');
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to sign out.';

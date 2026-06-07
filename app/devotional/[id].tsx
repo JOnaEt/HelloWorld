@@ -23,6 +23,7 @@ import { BorderRadius, Shadows, Spacing } from '../../constants/layout';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { useDevotional } from '../../hooks/useDevotional';
+import { useDevotionalStore } from '../../store/devotionalStore';
 import { getCategoryLabel } from '../../utils/format';
 import { formatDurationLong } from '../../utils/date';
 
@@ -53,6 +54,8 @@ export default function DevotionalDetailScreen() {
   };
 
   const handleListen = () => {
+    if (!devotional) return;
+    useDevotionalStore.getState().setCurrentDevotional(devotional);
     router.push('/devotional/player');
   };
 

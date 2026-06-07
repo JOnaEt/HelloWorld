@@ -11,7 +11,6 @@ import {
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import Svg, { Path, Circle, Line } from 'react-native-svg';
 import { Colors } from '../../constants/colors';
 import { FontSizes, FontWeights } from '../../constants/fonts';
 import { Spacing, BorderRadius, Shadows } from '../../constants/layout';
@@ -20,30 +19,6 @@ import { getDashboardStats } from '../../services/firebase/admin';
 import { StatCard } from '../../components/admin/StatCard';
 
 type DateRange = 'week' | 'month' | 'year';
-
-// Simple SVG line chart
-function LineChart({ values, color, width = 300, height = 80 }: {
-  values: number[];
-  color: string;
-  width?: number;
-  height?: number;
-}) {
-  if (values.length < 2) return null;
-  const max = Math.max(...values, 1);
-  const step = width / (values.length - 1);
-  const pts = values.map((v, i) => ({
-    x: i * step,
-    y: height - (v / max) * (height - 10) - 5,
-  }));
-  const d = pts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
-
-  return (
-    <Svg width={width} height={height}>
-      <Path d={d} stroke={color} strokeWidth={2} fill="none" strokeLinecap="round" strokeLinejoin="round" />
-      {pts.map((p, i) => <Circle key={i} cx={p.x} cy={p.y} r={3} fill={color} />)}
-    </Svg>
-  );
-}
 
 interface MetricRowProps {
   label: string;
@@ -71,10 +46,8 @@ export default function AnalyticsScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Mock chart values — in production, load from Firebase Analytics
-  const dauData = [120, 145, 132, 178, 165, 190, 210];
-  const newMembersData = [12, 8, 15, 22, 18, 25, 20];
-  const devotionalData = [45, 52, 48, 61, 58, 67, 72];
+  // Charts require Firebase Analytics BigQuery export — not yet available.
+  // Only real-time Firestore stats are shown below.
 
   const fetchData = useCallback(async () => {
     try {
@@ -173,17 +146,13 @@ export default function AnalyticsScreen() {
           </View>
         </View>
 
-        {/* DAU Chart */}
+        {/* DAU */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Daily Active Users</Text>
-          <View style={styles.chartCard}>
-            <View style={styles.chartHeader}>
-              <Text style={styles.chartTitle}>Last 7 Days</Text>
-              <Text style={styles.chartValue}>{stats?.activeToday ?? 0} today</Text>
-            </View>
-            <View style={styles.chartWrap}>
-              <LineChart values={dauData} color={Colors.primary} width={300} height={72} />
-            </View>
+          <View style={styles.card}>
+            <MetricRow label="Active Today" value={stats?.activeToday ?? 0} color={Colors.primary} />
+            <View style={styles.divider} />
+            <MetricRow label="New This Week" value={stats?.newThisWeek ?? 0} color="#3B82F6" />
           </View>
         </View>
 
@@ -198,12 +167,6 @@ export default function AnalyticsScreen() {
             <MetricRow label="Most Played Category" value="Prayer" />
             <View style={styles.divider} />
             <MetricRow label="New Devotionals" value="3" sub="this week" />
-          </View>
-          <Text style={styles.miniSectionTitle}>Play Trend</Text>
-          <View style={styles.chartCard}>
-            <View style={styles.chartWrap}>
-              <LineChart values={devotionalData} color="#3B82F6" width={300} height={60} />
-            </View>
           </View>
         </View>
 
@@ -238,14 +201,6 @@ export default function AnalyticsScreen() {
         {/* Growth */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Growth</Text>
-          <View style={styles.chartCard}>
-            <View style={styles.chartHeader}>
-              <Text style={styles.chartTitle}>New Members (7 days)</Text>
-            </View>
-            <View style={styles.chartWrap}>
-              <LineChart values={newMembersData} color="#8B5CF6" width={300} height={60} />
-            </View>
-          </View>
           <View style={styles.card}>
             <MetricRow label="Onboarding Completion" value="82%" color={Colors.success} />
             <View style={styles.divider} />
