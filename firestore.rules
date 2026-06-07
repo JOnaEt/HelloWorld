@@ -59,6 +59,14 @@ service cloud.firestore {
       allow read, write: if isAuthenticated() && isOwner(userId);
     }
 
+    // ── Devotional Read Progress (idempotency guard for markRead) ─────────────
+    match /devotionalProgress/{recordId} {
+      allow read, write: if isAuthenticated() &&
+        request.auth.uid == resource.data.userId;
+      allow create: if isAuthenticated() &&
+        request.auth.uid == request.resource.data.userId;
+    }
+
     // ── Devotionals ───────────────────────────────────────────────────────────
     match /devotionals/{devotionalId} {
       // All authenticated members can read devotionals

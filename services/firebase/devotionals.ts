@@ -124,12 +124,15 @@ export async function searchDevotionals(
 // ─── Engagement ───────────────────────────────────────────────────────────────
 
 export async function markRead(devotionalId: string, userId: string): Promise<void> {
-  await updateDoc(doc(db, COLLECTION, devotionalId), {
-    readCount: increment(1),
-  });
-  await updateDoc(doc(db, 'users', userId), {
-    'stats.totalDevotionalsRead': increment(1),
-  });
+  // Use a composite-key document to make this idempotent.
+  // If the doc already exists, setDoc is a no-op and we skip counter increments.
+  const progressRef = doc(db, 'devotionalProgress', `${userId}_${devotionalId}`);
+  const existing = await getDoc(progressRef);
+  if (existing.exists()) return;
+
+  await setDoc(progressRef, { userId, devotionalId, readAt: new Date().toISOString() });
+  await updateDoc(doc(db, COLLECTION, devotionalId), { readCount: increment(1) });
+  await updateDoc(doc(db, 'users', userId), { 'stats.totalDevotionalsRead': increment(1) });
 }
 
 export async function markListened(

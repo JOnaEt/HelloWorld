@@ -66,7 +66,15 @@ export default function GroupDetailScreen() {
       `Are you sure you want to leave "${group.name}"?`,
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Leave', style: 'destructive', onPress: () => leave(group.id) },
+        {
+          text: 'Leave',
+          style: 'destructive',
+          onPress: () => {
+            leave(group.id).catch((err) => {
+              Alert.alert('Error', err instanceof Error ? err.message : 'Could not leave group.');
+            });
+          },
+        },
       ]
     );
   };

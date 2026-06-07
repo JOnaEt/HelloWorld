@@ -15,6 +15,7 @@ import {
   completeOnboarding,
 } from '../services/firebase/auth';
 import { UserProfile } from '../types';
+import { Analytics } from '../services/analytics';
 
 export function useAuth() {
   const { user, isLoading, error, setLoading, setError, setUser, clearError, updateUser } =
@@ -27,6 +28,7 @@ export function useAuth() {
       try {
         const profile = await signIn(email, password);
         setUser(profile);
+        Analytics.login();
         if (profile.isOnboarded) {
           router.replace('/(tabs)/');
         } else {
@@ -55,6 +57,7 @@ export function useAuth() {
       try {
         const profile = await signUp(email, password, displayName, phoneNumber);
         setUser(profile);
+        Analytics.signUp();
         router.replace('/(auth)/onboarding/interests');
       } catch (err: unknown) {
         const message =
