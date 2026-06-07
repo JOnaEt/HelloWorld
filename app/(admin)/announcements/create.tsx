@@ -12,6 +12,8 @@ import {
   Modal,
   FlatList,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
+import { uploadAnnouncementImage } from '../../../services/firebase/storage';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -90,6 +92,8 @@ export default function CreateAnnouncementScreen() {
   const [type, setType] = useState<AnnouncementType>('news');
   const [priority, setPriority] = useState<AnnouncementPriority>('medium');
   const [imageUrl, setImageUrl] = useState('');
+  const [imageUploadProgress, setImageUploadProgress] = useState(0);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [actionLabel, setActionLabel] = useState('');
   const [actionUrl, setActionUrl] = useState('');
   const [isPinned, setIsPinned] = useState(false);
@@ -99,6 +103,30 @@ export default function CreateAnnouncementScreen() {
   const [showTypePicker, setShowTypePicker] = useState(false);
   const [showPriorityPicker, setShowPriorityPicker] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const pickImage = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.8,
+      aspect: [16, 9],
+      allowsEditing: true,
+    });
+    if (result.canceled || !result.assets[0]) return;
+
+    setIsUploadingImage(true);
+    try {
+      const tempId = Date.now().toString();
+      const url = await uploadAnnouncementImage(result.assets[0].uri, tempId, (p) => {
+        setImageUploadProgress(p);
+      });
+      setImageUrl(url);
+    } catch {
+      Alert.alert('Upload Failed', 'Could not upload image. Try again.');
+    } finally {
+      setIsUploadingImage(false);
+      setImageUploadProgress(0);
+    }
+  };
 
   const handlePublish = useCallback(async (sendPush = false) => {
     if (!title.trim()) {
@@ -201,17 +229,28 @@ export default function CreateAnnouncementScreen() {
             </TouchableOpacity>
           </FormField>
 
-          <FormField label="Image URL">
-            <TextInput
-              style={styles.input}
-              value={imageUrl}
-              onChangeText={setImageUrl}
-              placeholder="https://..."
-              placeholderTextColor={Colors.gray400}
-              autoCapitalize="none"
-              keyboardType="url"
-            />
-          </FormField>
+          <View style={styles.formField}>
+            <Text style={styles.fieldLabel}>Announcement Image</Text>
+            {imageUrl ? (
+              <View style={styles.uploadedRow}>
+                <Ionicons name="image-outline" size={16} color={Colors.success} />
+                <Text style={styles.uploadedText} numberOfLines={1}>Image uploaded ✓</Text>
+                <TouchableOpacity onPress={() => setImageUrl('')}>
+                  <Ionicons name="close-circle-outline" size={18} color={Colors.error} />
+                </TouchableOpacity>
+              </View>
+            ) : isUploadingImage ? (
+              <View style={styles.uploadProgress}>
+                <ActivityIndicator size="small" color={Colors.primary} />
+                <Text style={styles.uploadProgressText}>{Math.round(imageUploadProgress * 100)}%</Text>
+              </View>
+            ) : (
+              <TouchableOpacity style={styles.uploadBtn} onPress={pickImage}>
+                <Ionicons name="image-outline" size={20} color={Colors.primary} />
+                <Text style={styles.uploadBtnText}>Upload Image</Text>
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
 
         <SectionHeader title="Action (Optional)" />
@@ -464,4 +503,45 @@ const styles = StyleSheet.create({
   },
   pickerOptionSelected: { backgroundColor: Colors.light, borderRadius: BorderRadius.md, paddingHorizontal: Spacing[2] },
   pickerOptionText: { fontSize: FontSizes.base, color: Colors.textPrimary, textTransform: 'capitalize' },
+  uploadBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing[2],
+    backgroundColor: Colors.light,
+    borderRadius: BorderRadius.lg,
+    paddingVertical: Spacing[4],
+    paddingHorizontal: Spacing[4],
+    borderWidth: 1,
+    borderColor: Colors.primary + '40',
+    borderStyle: 'dashed',
+  },
+  uploadBtnText: {
+    fontSize: FontSizes.base,
+    fontWeight: FontWeights.medium,
+    color: Colors.primary,
+  },
+  uploadedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing[2],
+    backgroundColor: Colors.success + '10',
+    borderRadius: BorderRadius.md,
+    padding: Spacing[3],
+  },
+  uploadedText: {
+    flex: 1,
+    fontSize: FontSizes.sm,
+    color: Colors.success,
+    fontWeight: FontWeights.medium,
+  },
+  uploadProgress: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing[3],
+    padding: Spacing[3],
+  },
+  uploadProgressText: {
+    fontSize: FontSizes.sm,
+    color: Colors.textSecondary,
+  },
 });

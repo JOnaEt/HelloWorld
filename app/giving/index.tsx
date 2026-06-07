@@ -27,7 +27,11 @@ import Animated, {
 import { Colors } from '../../constants/colors';
 import { FontSizes, FontWeights } from '../../constants/fonts';
 import { Spacing, BorderRadius, Shadows } from '../../constants/layout';
-import { submitDonation, getDonationHistory, getGivingSummary, GIVING_CATEGORIES } from '../../services/firebase/giving';
+import { getDonationHistory, getGivingSummary, GIVING_CATEGORIES } from '../../services/firebase/giving';
+import { initializeChapaPayment, openChapaCheckout } from '../../services/chapa';
+import { addDoc, collection } from 'firebase/firestore';
+import { db } from '../../services/firebase/config';
+import { Analytics } from '../../services/analytics';
 import { useAuth } from '../../hooks/useAuth';
 import { formatCurrency, formatNumber } from '../../utils/format';
 import { formatDate } from '../../utils/date';
@@ -101,16 +105,68 @@ export default function GivingScreen() {
 
     setIsSubmitting(true);
     try {
-      await submitDonation(user.uid, parsedAmount, selectedCategory as any, isAnonymous, note.trim() || undefined);
-      Alert.alert(
-        'Thank You!',
-        `Your ${formatCurrency(parsedAmount)} gift has been received. May God bless your generosity!`,
-        [{ text: 'Done', onPress: () => { setAmount(''); setCustomAmount(''); setNote(''); setActiveTab('history'); } }]
-      );
-    } catch (e: any) {
-      Alert.alert('Error', e?.message ?? 'Failed to process donation. Please try again.');
-    } finally {
+      // Create a pending donation document first (get its ID)
+      const donationRef = await addDoc(collection(db, 'donations'), {
+        userId: user.uid,
+        amount: parsedAmount,
+        currency: 'ETB',
+        type: selectedCategory,
+        status: 'pending',
+        note: note.trim() || null,
+        isAnonymous,
+        createdAt: new Date().toISOString(),
+      });
+
+      const nameParts = (user.displayName ?? 'Church Member').split(' ');
+
+      Analytics.givingInitiated(selectedCategory);
+
+      // Call Cloud Function to get Chapa checkout URL
+      const { checkoutUrl } = await initializeChapaPayment({
+        amount: parsedAmount,
+        currency: 'ETB',
+        email: user.email ?? `${user.uid}@topic.app`,
+        firstName: nameParts[0] ?? 'Church',
+        lastName: nameParts[1] ?? 'Member',
+        title: `${GIVING_CATEGORIES.find((c) => c.id === selectedCategory)?.label ?? 'Offering'} - TOPIC`,
+        donationId: donationRef.id,
+        callbackPath: '/giving',
+      });
+
       setIsSubmitting(false);
+
+      // Open Chapa checkout in browser
+      const result = await openChapaCheckout(checkoutUrl);
+
+      if (result === 'completed') {
+        Analytics.givingCompleted(selectedCategory, parsedAmount);
+        Alert.alert(
+          'Thank You!',
+          `Your ${GIVING_CATEGORIES.find((c) => c.id === selectedCategory)?.label?.toLowerCase() ?? 'offering'} of ETB ${parsedAmount.toLocaleString()} has been received. God bless you!`,
+          [{ text: 'Done', onPress: () => { setAmount(''); setCustomAmount(''); setNote(''); loadHistory(); } }]
+        );
+      } else if (result === 'cancelled') {
+        Alert.alert('Payment Cancelled', 'Your payment was not completed. You can try again.');
+      } else {
+        Alert.alert(
+          'Payment Processing',
+          'Your payment is being processed. It will appear in your history once confirmed.',
+          [{ text: 'OK', onPress: loadHistory }]
+        );
+      }
+    } catch (error: unknown) {
+      setIsSubmitting(false);
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      // Fallback: if Cloud Functions not deployed, explain clearly
+      if (message.includes('NOT_FOUND') || message.includes('not found')) {
+        Alert.alert(
+          'Setup Required',
+          'Payment processing requires Cloud Functions to be deployed. See PAYMENT_SETUP_GUIDE.md for setup instructions.',
+          [{ text: 'OK' }]
+        );
+      } else {
+        Alert.alert('Payment Error', `Could not process payment: ${message}`);
+      }
     }
   };
 

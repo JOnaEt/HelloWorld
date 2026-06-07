@@ -1,5 +1,6 @@
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
+import { router } from 'expo-router';
 import { NotificationPreferences } from '../types';
 
 // ─── Configuration ────────────────────────────────────────────────────────────
@@ -11,6 +12,49 @@ Notifications.setNotificationHandler({
     shouldSetBadge: true,
   }),
 });
+
+// ─── Notification Tap Handler ─────────────────────────────────────────────────
+
+// Handle notification tap — navigate to relevant screen
+export function setupNotificationListeners(): () => void {
+  const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
+    const data = response.notification.request.content.data as Record<string, string>;
+
+    if (data?.route) {
+      router.push(data.route as Parameters<typeof router.push>[0]);
+    }
+  });
+
+  return () => subscription.remove();
+}
+
+// ─── Local Notification Scheduling ───────────────────────────────────────────
+
+// Schedule a local notification (used for devotional reminders)
+export async function scheduleLocalNotification(
+  title: string,
+  body: string,
+  hour: number,
+  minute: number,
+  identifier: string
+): Promise<void> {
+  // Cancel existing
+  await Notifications.cancelScheduledNotificationAsync(identifier).catch(() => {});
+
+  await Notifications.scheduleNotificationAsync({
+    identifier,
+    content: { title, body, sound: 'default' },
+    trigger: {
+      hour,
+      minute,
+      repeats: true,
+    },
+  });
+}
+
+export async function cancelScheduledNotification(identifier: string): Promise<void> {
+  await Notifications.cancelScheduledNotificationAsync(identifier).catch(() => {});
+}
 
 // ─── Permissions ──────────────────────────────────────────────────────────────
 

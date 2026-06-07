@@ -12,6 +12,9 @@ import {
   Modal,
   FlatList,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
+import * as DocumentPicker from 'expo-document-picker';
+import { uploadDevotionalCover, uploadDevotionalAudio } from '../../../services/firebase/storage';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -106,6 +109,10 @@ export default function CreateDevotionalScreen() {
   // Media
   const [audioUrl, setAudioUrl] = useState('');
   const [thumbnailUrl, setThumbnailUrl] = useState('');
+  const [coverUploadProgress, setCoverUploadProgress] = useState(0);
+  const [audioUploadProgress, setAudioUploadProgress] = useState(0);
+  const [isUploadingCover, setIsUploadingCover] = useState(false);
+  const [isUploadingAudio, setIsUploadingAudio] = useState(false);
 
   // Publishing
   const [authorName, setAuthorName] = useState(user?.displayName ?? '');
@@ -159,6 +166,7 @@ export default function CreateDevotionalScreen() {
         reflectionPrompts: reflectionPrompts.filter((p) => p.trim().length > 0),
         audioUrl: audioUrl.trim() || undefined,
         thumbnailUrl: thumbnailUrl.trim() || undefined,
+        coverUrl: thumbnailUrl.trim() || undefined,
         author: {
           id: user?.uid ?? '',
           name: authorName.trim(),
@@ -188,6 +196,52 @@ export default function CreateDevotionalScreen() {
     scriptureText, translation, content, prayer, reflectionPrompts,
     audioUrl, thumbnailUrl, authorName, authorTitle, isFeatured, isDaily, dailyDate, user,
   ]);
+
+  const pickCoverImage = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.8,
+      aspect: [16, 9],
+      allowsEditing: true,
+    });
+    if (result.canceled || !result.assets[0]) return;
+
+    setIsUploadingCover(true);
+    try {
+      const tempId = Date.now().toString();
+      const url = await uploadDevotionalCover(result.assets[0].uri, tempId, (p) => {
+        setCoverUploadProgress(p);
+      });
+      setThumbnailUrl(url);
+    } catch {
+      Alert.alert('Upload Failed', 'Could not upload cover image. Try again.');
+    } finally {
+      setIsUploadingCover(false);
+      setCoverUploadProgress(0);
+    }
+  };
+
+  const pickAudioFile = async () => {
+    const result = await DocumentPicker.getDocumentAsync({
+      type: 'audio/*',
+      copyToCacheDirectory: true,
+    });
+    if (result.canceled || !result.assets[0]) return;
+
+    setIsUploadingAudio(true);
+    try {
+      const tempId = Date.now().toString();
+      const url = await uploadDevotionalAudio(result.assets[0].uri, tempId, (p) => {
+        setAudioUploadProgress(p);
+      });
+      setAudioUrl(url);
+    } catch {
+      Alert.alert('Upload Failed', 'Could not upload audio file. Try again.');
+    } finally {
+      setIsUploadingAudio(false);
+      setAudioUploadProgress(0);
+    }
+  };
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -336,30 +390,49 @@ export default function CreateDevotionalScreen() {
         <SectionHeader title="Media" />
 
         <View style={styles.formSection}>
-          <FormField label="Audio URL">
-            <TextInput
-              style={styles.input}
-              value={audioUrl}
-              onChangeText={setAudioUrl}
-              placeholder="https://..."
-              placeholderTextColor={Colors.gray400}
-              autoCapitalize="none"
-              keyboardType="url"
-            />
-          </FormField>
-          <Text style={styles.fieldHint}>Upload to Firebase Storage first, then paste the URL here.</Text>
+          {/* Audio Upload */}
+          <Text style={styles.fieldLabel}>Audio File</Text>
+          {audioUrl ? (
+            <View style={styles.uploadedRow}>
+              <Ionicons name="musical-notes-outline" size={16} color={Colors.success} />
+              <Text style={styles.uploadedText} numberOfLines={1}>Audio uploaded ✓</Text>
+              <TouchableOpacity onPress={() => setAudioUrl('')}>
+                <Ionicons name="close-circle-outline" size={18} color={Colors.error} />
+              </TouchableOpacity>
+            </View>
+          ) : isUploadingAudio ? (
+            <View style={styles.uploadProgress}>
+              <ActivityIndicator size="small" color={Colors.primary} />
+              <Text style={styles.uploadProgressText}>{Math.round(audioUploadProgress * 100)}%</Text>
+            </View>
+          ) : (
+            <TouchableOpacity style={styles.uploadBtn} onPress={pickAudioFile}>
+              <Ionicons name="cloud-upload-outline" size={20} color={Colors.primary} />
+              <Text style={styles.uploadBtnText}>Upload Audio File</Text>
+            </TouchableOpacity>
+          )}
 
-          <FormField label="Thumbnail URL">
-            <TextInput
-              style={styles.input}
-              value={thumbnailUrl}
-              onChangeText={setThumbnailUrl}
-              placeholder="https://..."
-              placeholderTextColor={Colors.gray400}
-              autoCapitalize="none"
-              keyboardType="url"
-            />
-          </FormField>
+          {/* Cover Image Upload */}
+          <Text style={[styles.fieldLabel, { marginTop: Spacing[4] }]}>Cover Image</Text>
+          {thumbnailUrl ? (
+            <View style={styles.uploadedRow}>
+              <Ionicons name="image-outline" size={16} color={Colors.success} />
+              <Text style={styles.uploadedText} numberOfLines={1}>Image uploaded ✓</Text>
+              <TouchableOpacity onPress={() => setThumbnailUrl('')}>
+                <Ionicons name="close-circle-outline" size={18} color={Colors.error} />
+              </TouchableOpacity>
+            </View>
+          ) : isUploadingCover ? (
+            <View style={styles.uploadProgress}>
+              <ActivityIndicator size="small" color={Colors.primary} />
+              <Text style={styles.uploadProgressText}>{Math.round(coverUploadProgress * 100)}%</Text>
+            </View>
+          ) : (
+            <TouchableOpacity style={styles.uploadBtn} onPress={pickCoverImage}>
+              <Ionicons name="image-outline" size={20} color={Colors.primary} />
+              <Text style={styles.uploadBtnText}>Upload Cover Image</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Publishing */}
@@ -617,6 +690,47 @@ const styles = StyleSheet.create({
   },
   secondaryBtnText: { fontSize: FontSizes.base, fontWeight: FontWeights.bold, color: Colors.primary },
   disabledBtn: { opacity: 0.5 },
+  uploadBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing[2],
+    backgroundColor: Colors.light,
+    borderRadius: BorderRadius.lg,
+    paddingVertical: Spacing[4],
+    paddingHorizontal: Spacing[4],
+    borderWidth: 1,
+    borderColor: Colors.primary + '40',
+    borderStyle: 'dashed',
+  },
+  uploadBtnText: {
+    fontSize: FontSizes.base,
+    fontWeight: FontWeights.medium,
+    color: Colors.primary,
+  },
+  uploadedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing[2],
+    backgroundColor: Colors.success + '10',
+    borderRadius: BorderRadius.md,
+    padding: Spacing[3],
+  },
+  uploadedText: {
+    flex: 1,
+    fontSize: FontSizes.sm,
+    color: Colors.success,
+    fontWeight: FontWeights.medium,
+  },
+  uploadProgress: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing[3],
+    padding: Spacing[3],
+  },
+  uploadProgressText: {
+    fontSize: FontSizes.sm,
+    color: Colors.textSecondary,
+  },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',

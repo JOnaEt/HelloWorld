@@ -19,6 +19,7 @@ import { BorderRadius, Spacing, Shadows } from '../../constants/layout';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { useAuth } from '../../hooks/useAuth';
+import { Analytics } from '../../services/analytics';
 
 export default function RegisterScreen() {
   const { register, isLoading, error, clearError } = useAuth();
@@ -58,6 +59,7 @@ export default function RegisterScreen() {
     clearError();
     if (!validate()) return;
     await register(email.trim().toLowerCase(), password, name.trim(), phone.trim() || undefined);
+    Analytics.signUp();
   };
 
   return (

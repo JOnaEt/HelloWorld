@@ -19,6 +19,7 @@ import { PrayerForm } from '../../components/prayer/PrayerForm';
 import { EmptyState } from '../../components/common/EmptyState';
 import { LoadingScreen } from '../../components/common/LoadingScreen';
 import { usePrayer } from '../../hooks/usePrayer';
+import { Analytics } from '../../services/analytics';
 
 type TabType = 'all' | 'answered' | 'mine';
 
@@ -59,7 +60,10 @@ export default function PrayerWallScreen() {
 
   const handleSubmit = async (title: string, content: string, category: any, isAnon: boolean, isPublic: boolean) => {
     const id = await submitPrayer(title, content, category, isAnon, isPublic);
-    if (id) setShowForm(false);
+    if (id) {
+      Analytics.prayerSubmitted(category, isAnon);
+      setShowForm(false);
+    }
   };
 
   const tabs: Array<{ value: TabType; label: string; count: number }> = [

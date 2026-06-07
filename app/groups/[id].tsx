@@ -24,6 +24,7 @@ import { LoadingScreen } from '../../components/common/LoadingScreen';
 import { useGroups } from '../../hooks/useGroups';
 import { useAuth } from '../../hooks/useAuth';
 import { getCategoryLabel } from '../../utils/format';
+import { Analytics } from '../../services/analytics';
 
 export default function GroupDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -50,6 +51,7 @@ export default function GroupDetailScreen() {
     setIsJoining(true);
     try {
       await join(group.id);
+      Analytics.groupJoined(group.id, group.category);
     } catch {
       Alert.alert('Error', 'Failed to join group. Please try again.');
     } finally {

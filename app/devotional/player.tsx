@@ -35,6 +35,7 @@ import { ProgressBar } from '../../components/ui/ProgressBar';
 import { useDevotionalStore } from '../../store/devotionalStore';
 import { useAudio } from '../../hooks/useAudio';
 import { formatDuration } from '../../utils/date';
+import { Analytics } from '../../services/analytics';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -49,6 +50,10 @@ export default function PlayerScreen() {
 
   const audioUrl = currentDevotional?.audioUrl;
   const audio = useAudio(audioUrl);
+
+  // Analytics: track play start once per session
+  const hasTrackedPlayStart = useRef(false);
+  const hasTrackedCompletion = useRef(false);
 
   // Artwork pulse animation
   const artworkScale = useSharedValue(1);
@@ -82,6 +87,27 @@ export default function PlayerScreen() {
     transform: [{ scale: artworkScale.value }],
     opacity: artworkOpacity.value,
   }));
+
+  // Analytics: track play start
+  useEffect(() => {
+    if (audio.isPlaying && currentDevotional && !hasTrackedPlayStart.current) {
+      hasTrackedPlayStart.current = true;
+      Analytics.devotionalPlayStarted(currentDevotional.id, currentDevotional.title);
+    }
+  }, [audio.isPlaying, currentDevotional]);
+
+  // Analytics: track completion at >= 90%
+  useEffect(() => {
+    if (
+      currentDevotional &&
+      audio.duration > 0 &&
+      audio.position / audio.duration >= 0.9 &&
+      !hasTrackedCompletion.current
+    ) {
+      hasTrackedCompletion.current = true;
+      Analytics.devotionalPlayCompleted(currentDevotional.id);
+    }
+  }, [audio.position, audio.duration, currentDevotional]);
 
   const handlePlayPause = async () => {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);

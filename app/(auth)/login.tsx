@@ -18,6 +18,7 @@ import { BorderRadius, Spacing, Shadows } from '../../constants/layout';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { useAuth } from '../../hooks/useAuth';
+import { Analytics } from '../../services/analytics';
 
 export default function LoginScreen() {
   const { login, isLoading, error, clearError } = useAuth();
@@ -47,6 +48,7 @@ export default function LoginScreen() {
     clearError();
     if (!validate()) return;
     await login(email.trim().toLowerCase(), password);
+    Analytics.login();
   };
 
   return (
