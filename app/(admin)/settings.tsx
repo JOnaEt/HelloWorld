@@ -10,7 +10,10 @@ import {
   Alert,
   ActivityIndicator,
   Dimensions,
+  Image,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
+import { uploadFile } from '../../services/firebase/storage';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -85,6 +88,11 @@ export default function SettingsScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
+  // Logo upload
+  const [logoUrl, setLogoUrl] = useState('');
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const [logoUploadProgress, setLogoUploadProgress] = useState(0);
+
   // Church settings
   const [churchName, setChurchName] = useState('TOPIC Digital');
   const [tagline, setTagline] = useState('');
@@ -111,9 +119,35 @@ export default function SettingsScreen() {
   // Admin settings
   const [maintenanceMode, setMaintenanceMode] = useState(false);
 
+  const pickLogo = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.9,
+      allowsEditing: true,
+      aspect: [1, 1],
+    });
+    if (result.canceled || !result.assets[0]) return;
+
+    setIsUploadingLogo(true);
+    try {
+      const url = await uploadFile(result.assets[0].uri, 'church/logo.jpg', (p) => {
+        setLogoUploadProgress(p);
+      });
+      setLogoUrl(url);
+      await updateChurchSettings({ logoUrl: url });
+      Alert.alert('Saved', 'Church logo updated.');
+    } catch {
+      Alert.alert('Upload Failed', 'Could not upload logo. Try again.');
+    } finally {
+      setIsUploadingLogo(false);
+      setLogoUploadProgress(0);
+    }
+  };
+
   const loadSettings = useCallback(async () => {
     try {
       const settings = await getChurchSettings();
+      if (settings.logoUrl) setLogoUrl(settings.logoUrl as string);
       if (settings.churchName) setChurchName(settings.churchName as string);
       if (settings.tagline) setTagline(settings.tagline as string);
       if (settings.location) setLocation(settings.location as string);
@@ -145,6 +179,7 @@ export default function SettingsScreen() {
     try {
       await updateChurchSettings({
         churchName, tagline, location, website, contactEmail, contactPhone,
+        ...(logoUrl ? { logoUrl } : {}),
       });
       Alert.alert('Saved', 'Church settings updated successfully.');
     } catch {
@@ -264,6 +299,29 @@ export default function SettingsScreen() {
 
   const renderChurchTab = () => (
     <View style={styles.formSection}>
+      {/* Church Logo */}
+      <FormField label="Church Logo">
+        {logoUrl ? (
+          <View style={styles.logoPreviewWrap}>
+            <Image source={{ uri: logoUrl }} style={styles.logoPreview} resizeMode="contain" />
+            <TouchableOpacity style={styles.logoReplaceBtn} onPress={pickLogo} disabled={isUploadingLogo}>
+              <Ionicons name="camera-outline" size={16} color={Colors.primary} />
+              <Text style={styles.logoReplaceBtnText}>Replace Logo</Text>
+            </TouchableOpacity>
+          </View>
+        ) : isUploadingLogo ? (
+          <View style={styles.logoUploadProgress}>
+            <ActivityIndicator size="small" color={Colors.primary} />
+            <Text style={styles.logoUploadProgressText}>Uploading… {Math.round(logoUploadProgress * 100)}%</Text>
+          </View>
+        ) : (
+          <TouchableOpacity style={styles.logoUploadBtn} onPress={pickLogo}>
+            <Ionicons name="image-outline" size={22} color={Colors.primary} />
+            <Text style={styles.logoUploadBtnText}>Upload Church Logo</Text>
+          </TouchableOpacity>
+        )}
+      </FormField>
+
       <FormField label="Church Name">
         <TextInput
           style={styles.input}
@@ -762,5 +820,59 @@ const styles = StyleSheet.create({
   versionSub: {
     fontSize: FontSizes.xs,
     color: Colors.gray400,
+  },
+  logoPreviewWrap: {
+    alignItems: 'flex-start',
+    gap: Spacing[3],
+  },
+  logoPreview: {
+    width: 100,
+    height: 100,
+    borderRadius: BorderRadius.lg,
+    backgroundColor: Colors.gray100,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  logoReplaceBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing[2],
+    paddingVertical: Spacing[2],
+    paddingHorizontal: Spacing[3],
+    borderRadius: BorderRadius.full,
+    borderWidth: 1.5,
+    borderColor: Colors.primary,
+  },
+  logoReplaceBtnText: {
+    fontSize: FontSizes.sm,
+    fontWeight: FontWeights.semibold,
+    color: Colors.primary,
+  },
+  logoUploadBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing[2],
+    backgroundColor: Colors.light,
+    borderRadius: BorderRadius.lg,
+    paddingVertical: Spacing[4],
+    paddingHorizontal: Spacing[4],
+    borderWidth: 1,
+    borderColor: Colors.primary + '40',
+    borderStyle: 'dashed',
+  },
+  logoUploadBtnText: {
+    fontSize: FontSizes.base,
+    fontWeight: FontWeights.medium,
+    color: Colors.primary,
+  },
+  logoUploadProgress: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing[3],
+    padding: Spacing[3],
+  },
+  logoUploadProgressText: {
+    fontSize: FontSizes.sm,
+    color: Colors.textSecondary,
   },
 });

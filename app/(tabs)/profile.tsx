@@ -6,7 +6,13 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  Modal,
+  TextInput,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,17 +24,71 @@ import { Avatar } from '../../components/ui/Avatar';
 import { Badge } from '../../components/ui/Badge';
 import { ProgressBar, CircularProgress } from '../../components/ui/ProgressBar';
 import { useAuth } from '../../hooks/useAuth';
+import { uploadProfilePhoto } from '../../services/firebase/storage';
 import { formatNumber, formatCurrency } from '../../utils/format';
 import { formatDate } from '../../utils/date';
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
-  const { user, logout } = useAuth();
+  const { user, logout, updateProfile } = useAuth();
+
+  // Edit Profile modal state
+  const [editVisible, setEditVisible] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
 
   if (!user) return null;
 
   const growthScore = user.spiritualGrowthScore;
   const growthProgress = Math.min(growthScore / 1000, 1);
+
+  const openEditProfile = () => {
+    setEditName(user.displayName ?? '');
+    setEditPhone(user.phoneNumber ?? '');
+    setEditVisible(true);
+  };
+
+  const handleSaveProfile = async () => {
+    if (!editName.trim() || editName.trim().length < 2) {
+      Alert.alert('Invalid Name', 'Please enter a valid name (at least 2 characters).');
+      return;
+    }
+    setIsUpdating(true);
+    try {
+      await updateProfile({
+        displayName: editName.trim(),
+        ...(editPhone.trim() ? { phoneNumber: editPhone.trim() } : {}),
+      });
+      setEditVisible(false);
+      Alert.alert('Saved', 'Your profile has been updated.');
+    } catch {
+      Alert.alert('Error', 'Failed to update profile. Please try again.');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleChangePhoto = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.8,
+      allowsEditing: true,
+      aspect: [1, 1],
+    });
+    if (result.canceled || !result.assets[0]) return;
+
+    setIsUploadingPhoto(true);
+    try {
+      const photoURL = await uploadProfilePhoto(result.assets[0].uri, user.uid);
+      await updateProfile({ photoURL });
+    } catch {
+      Alert.alert('Error', 'Could not upload photo. Please try again.');
+    } finally {
+      setIsUploadingPhoto(false);
+    }
+  };
 
   const handleLogout = () => {
     Alert.alert(
@@ -49,7 +109,7 @@ export default function ProfileScreen() {
   ];
 
   const menuItems = [
-    { icon: 'person-outline', label: 'Edit Profile', onPress: () => {} },
+    { icon: 'person-outline', label: 'Edit Profile', onPress: openEditProfile },
     { icon: 'notifications-outline', label: 'Notification Settings', onPress: () => {} },
     { icon: 'shield-outline', label: 'Privacy & Security', onPress: () => {} },
     { icon: 'help-circle-outline', label: 'Help & Support', onPress: () => {} },
@@ -200,6 +260,78 @@ export default function ProfileScreen() {
 
         <Text style={styles.version}>TOPIC Digital v1.0.0</Text>
       </ScrollView>
+
+      {/* Edit Profile Modal */}
+      <Modal visible={editVisible} animationType="slide" transparent onRequestClose={() => setEditVisible(false)}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalOverlay}>
+          <View style={styles.editModal}>
+            <View style={styles.editModalHeader}>
+              <Text style={styles.editModalTitle}>Edit Profile</Text>
+              <TouchableOpacity onPress={() => setEditVisible(false)} style={styles.editModalClose}>
+                <Ionicons name="close" size={22} color={Colors.textPrimary} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Photo */}
+            <View style={styles.editPhotoRow}>
+              <Avatar uri={user.photoURL} name={user.displayName} size="xl" showBorder />
+              <TouchableOpacity
+                style={styles.changePhotoBtn}
+                onPress={handleChangePhoto}
+                disabled={isUploadingPhoto}
+              >
+                {isUploadingPhoto ? (
+                  <ActivityIndicator size="small" color={Colors.primary} />
+                ) : (
+                  <>
+                    <Ionicons name="camera-outline" size={16} color={Colors.primary} />
+                    <Text style={styles.changePhotoBtnText}>Change Photo</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.editField}>
+              <Text style={styles.editFieldLabel}>Full Name</Text>
+              <TextInput
+                style={styles.editInput}
+                value={editName}
+                onChangeText={setEditName}
+                placeholder="Your full name"
+                placeholderTextColor={Colors.gray400}
+                autoCapitalize="words"
+                returnKeyType="next"
+              />
+            </View>
+
+            <View style={styles.editField}>
+              <Text style={styles.editFieldLabel}>Phone Number (Optional)</Text>
+              <TextInput
+                style={styles.editInput}
+                value={editPhone}
+                onChangeText={setEditPhone}
+                placeholder="+1 (555) 000-0000"
+                placeholderTextColor={Colors.gray400}
+                keyboardType="phone-pad"
+                returnKeyType="done"
+                onSubmitEditing={handleSaveProfile}
+              />
+            </View>
+
+            <TouchableOpacity
+              style={[styles.saveProfileBtn, isUpdating && { opacity: 0.6 }]}
+              onPress={handleSaveProfile}
+              disabled={isUpdating}
+            >
+              {isUpdating ? (
+                <ActivityIndicator color={Colors.white} />
+              ) : (
+                <Text style={styles.saveProfileBtnText}>Save Changes</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   );
 }
@@ -481,5 +613,92 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     textAlign: 'center',
     marginBottom: Spacing[4],
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  editModal: {
+    backgroundColor: Colors.white,
+    borderTopLeftRadius: BorderRadius['2xl'],
+    borderTopRightRadius: BorderRadius['2xl'],
+    paddingHorizontal: Spacing[5],
+    paddingTop: Spacing[4],
+    paddingBottom: Spacing[10],
+    gap: Spacing[4],
+  },
+  editModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: Spacing[2],
+  },
+  editModalTitle: {
+    fontSize: FontSizes.xl,
+    fontWeight: FontWeights.bold,
+    color: Colors.textPrimary,
+  },
+  editModalClose: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: Colors.gray100,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  editPhotoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing[4],
+    paddingBottom: Spacing[2],
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  changePhotoBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing[2],
+    paddingVertical: Spacing[2],
+    paddingHorizontal: Spacing[3],
+    borderRadius: BorderRadius.full,
+    borderWidth: 1.5,
+    borderColor: Colors.primary,
+  },
+  changePhotoBtnText: {
+    fontSize: FontSizes.sm,
+    fontWeight: FontWeights.semibold,
+    color: Colors.primary,
+  },
+  editField: {
+    gap: Spacing[2],
+  },
+  editFieldLabel: {
+    fontSize: FontSizes.sm,
+    fontWeight: FontWeights.semibold,
+    color: Colors.textPrimary,
+  },
+  editInput: {
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: BorderRadius.md,
+    paddingHorizontal: Spacing[4],
+    paddingVertical: Spacing[3],
+    fontSize: FontSizes.base,
+    color: Colors.textPrimary,
+    backgroundColor: Colors.gray50,
+  },
+  saveProfileBtn: {
+    backgroundColor: Colors.primary,
+    paddingVertical: Spacing[4],
+    borderRadius: BorderRadius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: Spacing[2],
+  },
+  saveProfileBtnText: {
+    fontSize: FontSizes.base,
+    fontWeight: FontWeights.bold,
+    color: Colors.white,
   },
 });

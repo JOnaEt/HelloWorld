@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   Modal,
   FlatList,
+  Image,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { uploadAnnouncementImage } from '../../../services/firebase/storage';
@@ -232,17 +233,23 @@ export default function CreateAnnouncementScreen() {
           <View style={styles.formField}>
             <Text style={styles.fieldLabel}>Announcement Image</Text>
             {imageUrl ? (
-              <View style={styles.uploadedRow}>
-                <Ionicons name="image-outline" size={16} color={Colors.success} />
-                <Text style={styles.uploadedText} numberOfLines={1}>Image uploaded ✓</Text>
-                <TouchableOpacity onPress={() => setImageUrl('')}>
-                  <Ionicons name="close-circle-outline" size={18} color={Colors.error} />
-                </TouchableOpacity>
+              <View>
+                <Image source={{ uri: imageUrl }} style={styles.imagePreview} resizeMode="cover" />
+                <View style={styles.uploadedRow}>
+                  <Ionicons name="image-outline" size={16} color={Colors.success} />
+                  <Text style={styles.uploadedText}>Image uploaded ✓</Text>
+                  <TouchableOpacity onPress={pickImage}>
+                    <Text style={styles.replaceBtnText}>Replace</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => setImageUrl('')}>
+                    <Ionicons name="close-circle-outline" size={18} color={Colors.error} />
+                  </TouchableOpacity>
+                </View>
               </View>
             ) : isUploadingImage ? (
               <View style={styles.uploadProgress}>
                 <ActivityIndicator size="small" color={Colors.primary} />
-                <Text style={styles.uploadProgressText}>{Math.round(imageUploadProgress * 100)}%</Text>
+                <Text style={styles.uploadProgressText}>Uploading… {Math.round(imageUploadProgress * 100)}%</Text>
               </View>
             ) : (
               <TouchableOpacity style={styles.uploadBtn} onPress={pickImage}>
@@ -543,5 +550,17 @@ const styles = StyleSheet.create({
   uploadProgressText: {
     fontSize: FontSizes.sm,
     color: Colors.textSecondary,
+  },
+  imagePreview: {
+    width: '100%',
+    height: 160,
+    borderRadius: BorderRadius.lg,
+    marginBottom: Spacing[2],
+    backgroundColor: Colors.gray100,
+  },
+  replaceBtnText: {
+    fontSize: FontSizes.sm,
+    color: Colors.primary,
+    fontWeight: FontWeights.semibold,
   },
 });

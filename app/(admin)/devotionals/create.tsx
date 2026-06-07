@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,9 +11,11 @@ import {
   ActivityIndicator,
   Modal,
   FlatList,
+  Image,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
+import { Audio } from 'expo-av';
 import { uploadDevotionalCover, uploadDevotionalAudio } from '../../../services/firebase/storage';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -121,10 +123,52 @@ export default function CreateDevotionalScreen() {
   const [isDaily, setIsDaily] = useState(false);
   const [dailyDate, setDailyDate] = useState('');
 
+  // Audio preview
+  const audioSoundRef = useRef<Audio.Sound | null>(null);
+  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
+
   // UI state
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
   const [showTranslationPicker, setShowTranslationPicker] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    return () => {
+      audioSoundRef.current?.unloadAsync();
+    };
+  }, []);
+
+  const playPreviewAudio = async () => {
+    if (isPlayingAudio) {
+      await audioSoundRef.current?.stopAsync();
+      setIsPlayingAudio(false);
+      return;
+    }
+    try {
+      if (audioSoundRef.current) {
+        await audioSoundRef.current.unloadAsync();
+      }
+      const { sound } = await Audio.Sound.createAsync({ uri: audioUrl });
+      audioSoundRef.current = sound;
+      sound.setOnPlaybackStatusUpdate((status) => {
+        if (status.isLoaded && status.didJustFinish) {
+          setIsPlayingAudio(false);
+        }
+      });
+      setIsPlayingAudio(true);
+      await sound.playAsync();
+    } catch {
+      Alert.alert('Playback Error', 'Could not play audio preview.');
+    }
+  };
+
+  const clearAudio = () => {
+    audioSoundRef.current?.stopAsync();
+    audioSoundRef.current?.unloadAsync();
+    audioSoundRef.current = null;
+    setIsPlayingAudio(false);
+    setAudioUrl('');
+  };
 
   const addPrompt = useCallback(() => {
     setReflectionPrompts((prev) => [...prev, '']);
@@ -393,17 +437,29 @@ export default function CreateDevotionalScreen() {
           {/* Audio Upload */}
           <Text style={styles.fieldLabel}>Audio File</Text>
           {audioUrl ? (
-            <View style={styles.uploadedRow}>
-              <Ionicons name="musical-notes-outline" size={16} color={Colors.success} />
-              <Text style={styles.uploadedText} numberOfLines={1}>Audio uploaded ✓</Text>
-              <TouchableOpacity onPress={() => setAudioUrl('')}>
-                <Ionicons name="close-circle-outline" size={18} color={Colors.error} />
-              </TouchableOpacity>
+            <View>
+              <View style={styles.mediaPreviewRow}>
+                <Ionicons name="musical-notes-outline" size={20} color={Colors.success} />
+                <Text style={styles.mediaPreviewText}>Audio uploaded ✓</Text>
+                <TouchableOpacity onPress={playPreviewAudio} style={styles.previewActionBtn}>
+                  <Ionicons
+                    name={isPlayingAudio ? 'stop-circle-outline' : 'play-circle-outline'}
+                    size={26}
+                    color={Colors.primary}
+                  />
+                </TouchableOpacity>
+                <TouchableOpacity onPress={pickAudioFile} style={styles.previewActionBtn}>
+                  <Text style={styles.replaceBtnText}>Replace</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={clearAudio}>
+                  <Ionicons name="close-circle-outline" size={20} color={Colors.error} />
+                </TouchableOpacity>
+              </View>
             </View>
           ) : isUploadingAudio ? (
             <View style={styles.uploadProgress}>
               <ActivityIndicator size="small" color={Colors.primary} />
-              <Text style={styles.uploadProgressText}>{Math.round(audioUploadProgress * 100)}%</Text>
+              <Text style={styles.uploadProgressText}>Uploading… {Math.round(audioUploadProgress * 100)}%</Text>
             </View>
           ) : (
             <TouchableOpacity style={styles.uploadBtn} onPress={pickAudioFile}>
@@ -415,17 +471,23 @@ export default function CreateDevotionalScreen() {
           {/* Cover Image Upload */}
           <Text style={[styles.fieldLabel, { marginTop: Spacing[4] }]}>Cover Image</Text>
           {thumbnailUrl ? (
-            <View style={styles.uploadedRow}>
-              <Ionicons name="image-outline" size={16} color={Colors.success} />
-              <Text style={styles.uploadedText} numberOfLines={1}>Image uploaded ✓</Text>
-              <TouchableOpacity onPress={() => setThumbnailUrl('')}>
-                <Ionicons name="close-circle-outline" size={18} color={Colors.error} />
-              </TouchableOpacity>
+            <View>
+              <Image source={{ uri: thumbnailUrl }} style={styles.coverPreview} resizeMode="cover" />
+              <View style={styles.mediaPreviewRow}>
+                <Ionicons name="image-outline" size={16} color={Colors.success} />
+                <Text style={styles.mediaPreviewText}>Cover image uploaded ✓</Text>
+                <TouchableOpacity onPress={pickCoverImage} style={styles.previewActionBtn}>
+                  <Text style={styles.replaceBtnText}>Replace</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => setThumbnailUrl('')}>
+                  <Ionicons name="close-circle-outline" size={18} color={Colors.error} />
+                </TouchableOpacity>
+              </View>
             </View>
           ) : isUploadingCover ? (
             <View style={styles.uploadProgress}>
               <ActivityIndicator size="small" color={Colors.primary} />
-              <Text style={styles.uploadProgressText}>{Math.round(coverUploadProgress * 100)}%</Text>
+              <Text style={styles.uploadProgressText}>Uploading… {Math.round(coverUploadProgress * 100)}%</Text>
             </View>
           ) : (
             <TouchableOpacity style={styles.uploadBtn} onPress={pickCoverImage}>
@@ -730,6 +792,35 @@ const styles = StyleSheet.create({
   uploadProgressText: {
     fontSize: FontSizes.sm,
     color: Colors.textSecondary,
+  },
+  coverPreview: {
+    width: '100%',
+    height: 160,
+    borderRadius: BorderRadius.lg,
+    marginBottom: Spacing[2],
+    backgroundColor: Colors.gray100,
+  },
+  mediaPreviewRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing[2],
+    backgroundColor: Colors.success + '10',
+    borderRadius: BorderRadius.md,
+    padding: Spacing[3],
+  },
+  mediaPreviewText: {
+    flex: 1,
+    fontSize: FontSizes.sm,
+    color: Colors.success,
+    fontWeight: FontWeights.medium,
+  },
+  previewActionBtn: {
+    padding: 2,
+  },
+  replaceBtnText: {
+    fontSize: FontSizes.sm,
+    color: Colors.primary,
+    fontWeight: FontWeights.semibold,
   },
   modalOverlay: {
     flex: 1,
