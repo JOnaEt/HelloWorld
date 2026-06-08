@@ -1,79 +1,71 @@
-import { getAnalytics, logEvent as firebaseLogEvent, setUserId } from 'firebase/analytics';
-import { getApp } from 'firebase/app';
+import { Platform } from 'react-native';
 
-let _analytics: ReturnType<typeof getAnalytics> | null = null;
+let _analytics: any = null;
 
 function getAnalyticsInstance() {
-  if (!_analytics) {
-    try {
-      _analytics = getAnalytics(getApp());
-    } catch {
-      return null;
-    }
+  if (Platform.OS !== 'web') return null;
+  if (_analytics) return _analytics;
+  try {
+    const { getAnalytics } = require('firebase/analytics');
+    const { getApp } = require('firebase/app');
+    _analytics = getAnalytics(getApp());
+  } catch {
+    return null;
   }
   return _analytics;
+}
+
+function logEvent(name: string, params?: Record<string, string | number | boolean>) {
+  try {
+    const a = getAnalyticsInstance();
+    if (!a) return;
+    const { logEvent: firebaseLogEvent } = require('firebase/analytics');
+    firebaseLogEvent(a, name, params);
+  } catch {}
 }
 
 export function analyticsSetUser(uid: string) {
   try {
     const a = getAnalyticsInstance();
-    if (a) setUserId(a, uid);
+    if (!a) return;
+    const { setUserId } = require('firebase/analytics');
+    setUserId(a, uid);
   } catch {}
 }
 
 export function trackEvent(name: string, params?: Record<string, string | number | boolean>) {
-  try {
-    const a = getAnalyticsInstance();
-    if (a) firebaseLogEvent(a, name, params);
-  } catch {}
+  logEvent(name, params);
 }
 
-// ── Named event helpers ───────────────────────────────────────────────────────
-
 export const Analytics = {
-  login: () => trackEvent('login', { method: 'email' }),
-
-  signUp: () => trackEvent('sign_up', { method: 'email' }),
-
+  login: () => logEvent('login', { method: 'email' }),
+  signUp: () => logEvent('sign_up', { method: 'email' }),
   onboardingCompleted: (interestCount: number) =>
-    trackEvent('onboarding_completed', { interest_count: interestCount }),
-
+    logEvent('onboarding_completed', { interest_count: interestCount }),
   devotionalOpened: (id: string, category: string) =>
-    trackEvent('devotional_opened', { devotional_id: id, category }),
-
+    logEvent('devotional_opened', { devotional_id: id, category }),
   devotionalPlayStarted: (id: string, title: string) =>
-    trackEvent('devotional_play_started', { devotional_id: id, title }),
-
+    logEvent('devotional_play_started', { devotional_id: id, title }),
   devotionalPlayCompleted: (id: string) =>
-    trackEvent('devotional_completed', { devotional_id: id }),
-
+    logEvent('devotional_completed', { devotional_id: id }),
   devotionalShared: (id: string) =>
-    trackEvent('devotional_shared', { devotional_id: id }),
-
+    logEvent('devotional_shared', { devotional_id: id }),
   bibleReadingCompleted: (planId: string, day: number) =>
-    trackEvent('bible_reading_completed', { plan_id: planId, day }),
-
+    logEvent('bible_reading_completed', { plan_id: planId, day }),
   streakMilestone: (days: number) =>
-    trackEvent('streak_milestone', { days }),
-
+    logEvent('streak_milestone', { days }),
   prayerSubmitted: (category: string, isAnonymous: boolean) =>
-    trackEvent('prayer_submitted', { category, is_anonymous: isAnonymous }),
-
+    logEvent('prayer_submitted', { category, is_anonymous: isAnonymous }),
   prayerReaction: (prayerId: string) =>
-    trackEvent('prayer_reaction', { prayer_id: prayerId }),
-
+    logEvent('prayer_reaction', { prayer_id: prayerId }),
   groupJoined: (groupId: string, category: string) =>
-    trackEvent('group_joined', { group_id: groupId, category }),
-
+    logEvent('group_joined', { group_id: groupId, category }),
   givingCompleted: (type: string, amount: number) =>
-    trackEvent('donation_completed', { type, amount, currency: 'ETB' }),
-
+    logEvent('donation_completed', { type, amount, currency: 'ETB' }),
   givingInitiated: (type: string) =>
-    trackEvent('donation_initiated', { type }),
-
+    logEvent('donation_initiated', { type }),
   announcementOpened: (id: string, type: string) =>
-    trackEvent('announcement_opened', { announcement_id: id, type }),
-
+    logEvent('announcement_opened', { announcement_id: id, type }),
   adminActionTaken: (action: string, module: string) =>
-    trackEvent('admin_action', { action, module }),
+    logEvent('admin_action', { action, module }),
 };
