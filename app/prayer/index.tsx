@@ -37,6 +37,7 @@ export default function PrayerWallScreen() {
     isSubmitting,
     submitError,
     filteredPrayers,
+    error,
     fetchPublicPrayers,
     fetchAnsweredPrayers,
     fetchMyPrayers,
@@ -45,6 +46,7 @@ export default function PrayerWallScreen() {
     hasPrayed,
     setActiveTab,
     setSearchQuery,
+    clearError,
   } = usePrayer();
 
   useEffect(() => {
@@ -123,6 +125,17 @@ export default function PrayerWallScreen() {
           </TouchableOpacity>
         ))}
       </ScrollView>
+
+      {/* Error banner */}
+      {error && (
+        <View style={styles.errorBanner}>
+          <Ionicons name="cloud-offline-outline" size={16} color={Colors.error} />
+          <Text style={styles.errorText} numberOfLines={1}>{error}</Text>
+          <TouchableOpacity onPress={() => { clearError(); fetchPublicPrayers(); fetchAnsweredPrayers(); fetchMyPrayers(); }}>
+            <Text style={styles.retryText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* Prayer List */}
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
@@ -281,6 +294,27 @@ const styles = StyleSheet.create({
     padding: Spacing[5],
     paddingBottom: Spacing['2xl'],
     gap: Spacing[3],
+  },
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing[2],
+    backgroundColor: '#FEE2E2',
+    paddingHorizontal: Spacing[4],
+    paddingVertical: Spacing[3],
+    borderBottomWidth: 1,
+    borderBottomColor: '#FECACA',
+  },
+  errorText: {
+    flex: 1,
+    fontSize: FontSizes.xs,
+    color: Colors.error,
+  },
+  retryText: {
+    fontSize: FontSizes.xs,
+    fontWeight: FontWeights.bold,
+    color: Colors.error,
+    textDecorationLine: 'underline',
   },
   fab: {
     position: 'absolute',

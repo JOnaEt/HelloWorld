@@ -7,7 +7,6 @@ import {
   Modal,
   ScrollView,
 } from 'react-native';
-import Slider from '@react-native-community/slider';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/colors';
 import { FontSizes, FontWeights } from '../../constants/fonts';

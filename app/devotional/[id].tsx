@@ -229,7 +229,7 @@ export default function DevotionalDetailScreen() {
             title="Listen to Devotional"
             onPress={handleListen}
             fullWidth
-            icon={<Ionicons name="headset-outline" size={20} color={Colors.white} />}
+            leadingIcon={<Ionicons name="headset-outline" size={20} color={Colors.white} />}
           />
         </Animated.View>
       )}

@@ -493,7 +493,7 @@ const styles = StyleSheet.create({
     height: '100%',
     borderRadius: BorderRadius['3xl'],
     overflow: 'hidden',
-    ...(Shadows.xl as object) || {},
+    ...(Shadows.lg as object),
     shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 16 },
     shadowOpacity: 0.5,

@@ -45,9 +45,9 @@ export async function scheduleLocalNotification(
     identifier,
     content: { title, body, sound: 'default' },
     trigger: {
+      type: Notifications.SchedulableTriggerInputTypes.DAILY,
       hour,
       minute,
-      repeats: true,
     },
   });
 }
@@ -115,9 +115,9 @@ export async function scheduleDailyDevotional(
       data: { type: 'devotional', screen: '/(tabs)/' },
     },
     trigger: {
+      type: Notifications.SchedulableTriggerInputTypes.DAILY,
       hour,
       minute,
-      repeats: true,
     },
   });
 
@@ -145,9 +145,9 @@ export async function scheduleStreakReminder(
       data: { type: 'streak', screen: '/(tabs)/' },
     },
     trigger: {
+      type: Notifications.SchedulableTriggerInputTypes.DAILY,
       hour,
       minute,
-      repeats: true,
     },
   });
   return id;

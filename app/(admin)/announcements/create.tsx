@@ -345,13 +345,12 @@ export default function CreateAnnouncementScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.pushBtn, isSubmitting && styles.disabledBtn]}
-            onPress={() => handlePublish(true)}
-            disabled={isSubmitting}
-            activeOpacity={0.8}
+            style={[styles.pushBtn, styles.disabledBtn]}
+            disabled={true}
+            activeOpacity={1}
           >
             <Ionicons name="notifications-outline" size={18} color={Colors.white} />
-            <Text style={styles.primaryBtnText}>Publish + Send Push</Text>
+            <Text style={styles.primaryBtnText}>Publish + Push (Coming Soon)</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

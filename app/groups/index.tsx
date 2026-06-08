@@ -41,12 +41,11 @@ export default function GroupsIndexScreen() {
   const [localSearch, setLocalSearch] = useState('');
 
   const {
-    groups,
     filteredGroups,
     featuredGroups,
     isGroupsLoading,
     selectedCategory,
-    joinedGroupIds,
+    error,
     fetchAllGroups,
     fetchFeaturedGroups,
     filterByCategory,
@@ -174,7 +173,17 @@ export default function GroupsIndexScreen() {
             )}
           </View>
 
-          {isGroupsLoading ? (
+          {error ? (
+            <View style={styles.errorBanner}>
+              <Ionicons name="cloud-offline-outline" size={20} color={Colors.error} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.errorTitle}>Could not load groups</Text>
+                <TouchableOpacity onPress={() => { fetchAllGroups(); fetchFeaturedGroups(); }}>
+                  <Text style={styles.retryText}>Tap to retry</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ) : isGroupsLoading ? (
             <View style={styles.skeletonGrid}>
               {[0, 1, 2, 3].map((i) => (
                 <GroupCardSkeleton key={i} style={styles.groupCardItem} />
@@ -338,5 +347,27 @@ const styles = StyleSheet.create({
   },
   groupCardItem: {
     width: '48%',
+  },
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing[3],
+    backgroundColor: '#FEE2E2',
+    borderRadius: BorderRadius.xl,
+    padding: Spacing[4],
+    marginHorizontal: Spacing[5],
+    borderWidth: 1,
+    borderColor: '#FECACA',
+  },
+  errorTitle: {
+    fontSize: FontSizes.sm,
+    fontWeight: FontWeights.semibold,
+    color: Colors.error,
+  },
+  retryText: {
+    fontSize: FontSizes.xs,
+    color: Colors.error,
+    textDecorationLine: 'underline',
+    marginTop: 2,
   },
 });

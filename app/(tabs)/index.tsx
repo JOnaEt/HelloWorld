@@ -97,7 +97,7 @@ export default function HomeScreen() {
             <DevotionalHero devotional={dailyDevotional} />
           ) : (
             <View style={styles.heroPlaceholder}>
-              <Ionicons name="book-open-outline" size={32} color={Colors.gray400} />
+              <Ionicons name="book-outline" size={32} color={Colors.gray400} />
               <Text style={styles.heroPlaceholderText}>No devotional available</Text>
             </View>
           )}

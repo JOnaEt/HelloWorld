@@ -195,6 +195,7 @@ export function useGroups() {
     currentGroupMembers: store.currentGroupMembers,
     isDetailLoading: store.isDetailLoading,
     featuredGroups: store.featuredGroups,
+    joinedGroupIds: store.joinedGroupIds,
     error: store.error,
 
     // Actions

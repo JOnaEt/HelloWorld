@@ -155,7 +155,7 @@ export default function PrayerDetailScreen() {
               onPress={() => !isPrayed && prayFor(prayer.id)}
               variant={isPrayed ? 'secondary' : 'primary'}
               fullWidth
-              icon={<Ionicons name="hand-right" size={18} color={isPrayed ? Colors.primary : Colors.white} />}
+              leadingIcon={<Ionicons name="hand-right" size={18} color={isPrayed ? Colors.primary : Colors.white} />}
             />
           )}
 
@@ -165,7 +165,7 @@ export default function PrayerDetailScreen() {
               onPress={handleMarkAnswered}
               variant="outline"
               fullWidth
-              icon={<Ionicons name="checkmark-circle-outline" size={18} color={Colors.primary} />}
+              leadingIcon={<Ionicons name="checkmark-circle-outline" size={18} color={Colors.primary} />}
             />
           )}
         </View>
