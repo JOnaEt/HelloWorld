@@ -122,7 +122,7 @@ export default function CreateGroupScreen() {
         leaderId: user?.uid ?? '',
         leader: {
           id: user?.uid ?? '',
-          name: leaderSearch.trim() || user?.displayName ?? 'Admin',
+          name: leaderSearch.trim() || (user?.displayName ?? 'Admin'),
           photoURL: user?.photoURL ?? undefined,
         },
         coLeaderIds: [],
