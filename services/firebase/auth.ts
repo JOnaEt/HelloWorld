@@ -87,13 +87,51 @@ export async function signIn(
   const credential = await signInWithEmailAndPassword(auth, email, password);
   const { user } = credential;
 
-  // Update last active
-  await updateDoc(doc(db, 'users', user.uid), {
-    lastActiveAt: new Date().toISOString(),
-  });
+  let profile = await getUserProfile(user.uid);
 
-  const profile = await getUserProfile(user.uid);
-  if (!profile) throw new Error('User profile not found.');
+  if (!profile) {
+    // Profile missing — create a minimal one so the user can continue
+    profile = {
+      id: user.uid,
+      uid: user.uid,
+      email: user.email ?? email,
+      displayName: user.displayName ?? email.split('@')[0],
+      phoneNumber: '',
+      role: 'member' as UserRole,
+      joinedAt: new Date().toISOString(),
+      lastActiveAt: new Date().toISOString(),
+      interests: [],
+      groupIds: [],
+      spiritualGrowthScore: 0,
+      isOnboarded: false,
+      notificationPreferences: {
+        dailyDevotional: true,
+        dailyDevotionalTime: '07:00',
+        prayerReminders: true,
+        groupUpdates: true,
+        announcements: true,
+        givingReminders: false,
+      },
+      stats: {
+        totalDevotionalsRead: 0,
+        totalDevotionalsListened: 0,
+        totalPrayersSubmitted: 0,
+        totalPrayersAnswered: 0,
+        currentStreak: 0,
+        longestStreak: 0,
+        totalGroupsJoined: 0,
+        totalBibleReadings: 0,
+        totalDonations: 0,
+        joinedAt: new Date().toISOString(),
+      },
+    };
+    await setDoc(doc(db, 'users', user.uid), profile);
+  } else {
+    await updateDoc(doc(db, 'users', user.uid), {
+      lastActiveAt: new Date().toISOString(),
+    });
+  }
+
   return profile;
 }
 
