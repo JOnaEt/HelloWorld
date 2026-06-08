@@ -227,9 +227,9 @@ export default function CreateDevotionalScreen() {
       });
 
       router.back();
-    } catch (err) {
+    } catch (err: any) {
       console.error('Create devotional error:', err);
-      setSubmitError('Failed to save devotional. Check your connection and try again.');
+      setSubmitError('Save failed: ' + (err?.message ?? JSON.stringify(err)));
     } finally {
       setIsSubmitting(false);
     }
