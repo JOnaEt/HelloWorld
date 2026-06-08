@@ -131,6 +131,7 @@ export default function CreateDevotionalScreen() {
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
   const [showTranslationPicker, setShowTranslationPicker] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
 
   useEffect(() => {
     return () => {
@@ -183,12 +184,13 @@ export default function CreateDevotionalScreen() {
   }, []);
 
   const handleSubmit = useCallback(async (draft: boolean) => {
+    setSubmitError('');
     if (!title.trim()) {
-      Alert.alert('Missing Field', 'Please enter a title.');
+      setSubmitError('Please enter a title.');
       return;
     }
     if (!content.trim()) {
-      Alert.alert('Missing Field', 'Please enter devotional content.');
+      setSubmitError('Please enter the Written Devotion content.');
       return;
     }
 
@@ -224,14 +226,10 @@ export default function CreateDevotionalScreen() {
         tags: [category],
       });
 
-      Alert.alert(
-        'Success',
-        draft ? 'Devotional saved as draft.' : 'Devotional published successfully!',
-        [{ text: 'OK', onPress: () => router.back() }]
-      );
+      router.back();
     } catch (err) {
       console.error('Create devotional error:', err);
-      Alert.alert('Error', 'Failed to save devotional. Please try again.');
+      setSubmitError('Failed to save devotional. Check your connection and try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -242,23 +240,25 @@ export default function CreateDevotionalScreen() {
   ]);
 
   const pickCoverImage = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 0.8,
-      aspect: [16, 9],
-      allowsEditing: true,
-    });
-    if (result.canceled || !result.assets[0]) return;
-
-    setIsUploadingCover(true);
     try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 0.8,
+        aspect: [16, 9],
+        allowsEditing: true,
+      });
+      if (result.canceled || !result.assets[0]) return;
+
+      setIsUploadingCover(true);
+      setSubmitError('');
       const tempId = Date.now().toString();
       const url = await uploadDevotionalCover(result.assets[0].uri, tempId, (p) => {
         setCoverUploadProgress(p);
       });
       setThumbnailUrl(url);
-    } catch {
-      Alert.alert('Upload Failed', 'Could not upload cover image. Try again.');
+    } catch (err: any) {
+      console.error('Cover upload error:', err);
+      setSubmitError('Cover upload failed: ' + (err?.message ?? 'Unknown error'));
     } finally {
       setIsUploadingCover(false);
       setCoverUploadProgress(0);
@@ -266,21 +266,23 @@ export default function CreateDevotionalScreen() {
   };
 
   const pickAudioFile = async () => {
-    const result = await DocumentPicker.getDocumentAsync({
-      type: 'audio/*',
-      copyToCacheDirectory: true,
-    });
-    if (result.canceled || !result.assets[0]) return;
-
-    setIsUploadingAudio(true);
     try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: 'audio/*',
+        copyToCacheDirectory: true,
+      });
+      if (result.canceled || !result.assets[0]) return;
+
+      setIsUploadingAudio(true);
+      setSubmitError('');
       const tempId = Date.now().toString();
       const url = await uploadDevotionalAudio(result.assets[0].uri, tempId, (p) => {
         setAudioUploadProgress(p);
       });
       setAudioUrl(url);
-    } catch {
-      Alert.alert('Upload Failed', 'Could not upload audio file. Try again.');
+    } catch (err: any) {
+      console.error('Audio upload error:', err);
+      setSubmitError('Audio upload failed: ' + (err?.message ?? 'Unknown error'));
     } finally {
       setIsUploadingAudio(false);
       setAudioUploadProgress(0);
@@ -562,6 +564,12 @@ export default function CreateDevotionalScreen() {
 
         {/* Buttons */}
         <View style={styles.submitSection}>
+          {submitError ? (
+            <View style={styles.errorBanner}>
+              <Ionicons name="alert-circle-outline" size={18} color={Colors.error} />
+              <Text style={styles.errorBannerText}>{submitError}</Text>
+            </View>
+          ) : null}
           <TouchableOpacity
             style={[styles.primaryBtn, isSubmitting && styles.disabledBtn]}
             onPress={() => handleSubmit(false)}
@@ -752,6 +760,21 @@ const styles = StyleSheet.create({
   },
   secondaryBtnText: { fontSize: FontSizes.base, fontWeight: FontWeights.bold, color: Colors.primary },
   disabledBtn: { opacity: 0.5 },
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing[2],
+    backgroundColor: '#FEE2E2',
+    borderRadius: BorderRadius.md,
+    padding: Spacing[3],
+    marginBottom: Spacing[2],
+  },
+  errorBannerText: {
+    flex: 1,
+    fontSize: FontSizes.sm,
+    color: Colors.error,
+    fontWeight: FontWeights.medium,
+  },
   uploadBtn: {
     flexDirection: 'row',
     alignItems: 'center',
