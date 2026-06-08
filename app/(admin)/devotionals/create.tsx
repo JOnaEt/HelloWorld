@@ -197,7 +197,7 @@ export default function CreateDevotionalScreen() {
     setIsSubmitting(true);
     try {
       const now = new Date().toISOString();
-      await createDevotional({
+      const devotionalData: any = {
         title: title.trim(),
         category,
         scripture: {
@@ -210,21 +210,23 @@ export default function CreateDevotionalScreen() {
         content: content.trim(),
         prayer: prayer.trim(),
         reflectionPrompts: reflectionPrompts.filter((p) => p.trim().length > 0),
-        audioUrl: audioUrl.trim() || undefined,
-        thumbnailUrl: thumbnailUrl.trim() || undefined,
-        coverUrl: thumbnailUrl.trim() || undefined,
         author: {
           id: user?.uid ?? '',
           name: authorName.trim(),
-          title: authorTitle.trim() || undefined,
-          photoURL: user?.photoURL ?? undefined,
+          ...(authorTitle.trim() ? { title: authorTitle.trim() } : {}),
+          ...(user?.photoURL ? { photoURL: user.photoURL } : {}),
         },
         publishedAt: now,
         isFeatured,
         isDaily,
-        dailyDate: isDaily ? dailyDate : undefined,
         tags: [category],
-      });
+      };
+      if (audioUrl.trim()) devotionalData.audioUrl = audioUrl.trim();
+      if (thumbnailUrl.trim()) devotionalData.thumbnailUrl = thumbnailUrl.trim();
+      if (thumbnailUrl.trim()) devotionalData.coverUrl = thumbnailUrl.trim();
+      if (isDaily && dailyDate.trim()) devotionalData.dailyDate = dailyDate.trim();
+
+      await createDevotional(devotionalData);
 
       router.back();
     } catch (err: any) {
