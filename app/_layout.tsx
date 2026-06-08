@@ -5,6 +5,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as SplashScreen from 'expo-splash-screen';
 import * as Notifications from 'expo-notifications';
+import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import { doc, setDoc } from 'firebase/firestore';
 import { db } from '../services/firebase/config';
@@ -32,8 +33,13 @@ export default function RootLayout() {
 
       if (finalStatus !== 'granted') return;
 
+      const easProjectId = Constants.expoConfig?.extra?.eas?.projectId;
+      if (!easProjectId || easProjectId === 'topic-digital-church-app') {
+        console.warn('Push notifications: set a valid EAS UUID in app.json extra.eas.projectId');
+        return;
+      }
       const tokenData = await Notifications.getExpoPushTokenAsync({
-        projectId: 'topic-digital-church-app', // matches app.json extra.eas.projectId
+        projectId: easProjectId,
       });
 
       // Store token in Firestore

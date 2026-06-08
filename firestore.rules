@@ -120,7 +120,7 @@ service cloud.firestore {
     }
 
     // ── Prayer Requests ───────────────────────────────────────────────────────
-    match /prayers/{prayerId} {
+    match /prayerRequests/{prayerId} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated();
       allow update: if isAuthenticated() && (
@@ -129,6 +129,28 @@ service cloud.firestore {
       allow delete: if isAuthenticated() && (
         isOwner(resource.data.userId) || isAdmin()
       );
+    }
+
+    // ── Group Members (flat collection) ───────────────────────────────────────
+    match /groupMembers/{memberId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow delete: if isAuthenticated();
+    }
+
+    // ── Group Attendance (flat collection) ────────────────────────────────────
+    match /groupAttendance/{attendanceId} {
+      allow read: if isAuthenticated();
+      allow write: if isLeaderOrAdmin();
+    }
+
+    // ── Listened Records (devotional audio progress) ───────────────────────────
+    match /listenedRecords/{recordId} {
+      allow read, write: if isAuthenticated() &&
+        request.auth.uid == resource.data.userId;
+      allow create: if isAuthenticated() &&
+        request.auth.uid == request.resource.data.userId;
     }
 
     // ── Church Announcements ──────────────────────────────────────────────────
