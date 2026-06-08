@@ -60,7 +60,7 @@ export default function HomeScreen() {
       <Header
         showLogo
         rightElement={
-          <NotificationBtn count={2} onPress={() => router.push('/announcements/')} />
+          <NotificationBtn onPress={() => router.push('/announcements/')} />
         }
       />
 
@@ -143,14 +143,6 @@ export default function HomeScreen() {
           <UpcomingEvents onViewAll={() => router.push('/announcements/')} />
         </View>
 
-        {/* Faith Verse */}
-        <View style={styles.verseCard}>
-          <Text style={styles.verseRef}>Verse of the Day · Psalm 119:105</Text>
-          <Text style={styles.verseText}>
-            "Your word is a lamp for my feet, a light on my path."
-          </Text>
-          <Text style={styles.verseTranslation}>New International Version (NIV)</Text>
-        </View>
       </ScrollView>
     </View>
   );
@@ -235,32 +227,5 @@ const styles = StyleSheet.create({
     fontSize: FontSizes.xs,
     fontWeight: FontWeights.semibold,
     color: Colors.textPrimary,
-  },
-  verseCard: {
-    margin: Spacing[5],
-    backgroundColor: Colors.card,
-    borderRadius: BorderRadius['2xl'],
-    padding: Spacing[5],
-    borderLeftWidth: 4,
-    borderLeftColor: Colors.primary,
-    gap: Spacing[2],
-    ...(Shadows.base as object),
-  },
-  verseRef: {
-    fontSize: FontSizes.xs,
-    fontWeight: FontWeights.semibold,
-    color: Colors.primary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  verseText: {
-    fontSize: FontSizes.base,
-    fontStyle: 'italic',
-    color: Colors.textPrimary,
-    lineHeight: 24,
-  },
-  verseTranslation: {
-    fontSize: FontSizes.xs,
-    color: Colors.textSecondary,
   },
 });

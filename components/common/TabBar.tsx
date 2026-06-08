@@ -31,13 +31,12 @@ interface TabBarProps {
   navigation: any;
 }
 
-const TABS: TabItem[] = [
-  { name: 'index', label: 'Home', icon: 'home-outline', activeIcon: 'home' },
-  { name: 'library', label: 'Library', icon: 'headset-outline', activeIcon: 'headset' },
-  { name: 'bible', label: 'Bible', icon: 'book-outline', activeIcon: 'book' },
-  { name: 'community', label: 'Community', icon: 'people-outline', activeIcon: 'people' },
-  { name: 'profile', label: 'Profile', icon: 'person-outline', activeIcon: 'person' },
-];
+const TAB_CONFIG: Record<string, Omit<TabItem, 'name'>> = {
+  index:     { label: 'Home',      icon: 'home-outline',    activeIcon: 'home' },
+  library:   { label: 'Library',   icon: 'headset-outline', activeIcon: 'headset' },
+  community: { label: 'Community', icon: 'people-outline',  activeIcon: 'people' },
+  profile:   { label: 'Profile',   icon: 'person-outline',  activeIcon: 'person' },
+};
 
 export function CustomTabBar({ state, descriptors, navigation }: TabBarProps) {
   const insets = useSafeAreaInsets();
@@ -53,12 +52,10 @@ export function CustomTabBar({ state, descriptors, navigation }: TabBarProps) {
       ]}
     >
       {state.routes.map((route: any, index: number) => {
-        const tab = TABS[index] ?? {
-          name: route.name,
-          label: route.name,
-          icon: 'apps-outline',
-          activeIcon: 'apps',
-        };
+        const config = TAB_CONFIG[route.name];
+        if (!config) return null;
+
+        const tab: TabItem = { name: route.name, ...config };
         const isFocused = state.index === index;
 
         const onPress = () => {

@@ -37,6 +37,7 @@ export default function TabsLayout() {
         name="bible"
         options={{
           title: 'Bible',
+          href: null,
         }}
       />
       <Tabs.Screen

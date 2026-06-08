@@ -12,6 +12,7 @@ import {
   Dimensions,
   Image,
 } from 'react-native';
+// Alert is kept for the maintenance mode confirmation dialog (destructive action)
 import * as ImagePicker from 'expo-image-picker';
 import { uploadFile } from '../../services/firebase/storage';
 import { router } from 'expo-router';
@@ -87,6 +88,12 @@ export default function SettingsScreen() {
   const [activeTab, setActiveTab] = useState<SettingsTab>('church');
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<{ ok: boolean; msg: string } | null>(null);
+
+  const showStatus = (ok: boolean, msg: string) => {
+    setSaveStatus({ ok, msg });
+    setTimeout(() => setSaveStatus(null), 3000);
+  };
 
   // Logo upload
   const [logoUrl, setLogoUrl] = useState('');
@@ -135,9 +142,9 @@ export default function SettingsScreen() {
       });
       setLogoUrl(url);
       await updateChurchSettings({ logoUrl: url });
-      Alert.alert('Saved', 'Church logo updated.');
+      showStatus(true, 'Church logo updated.');
     } catch {
-      Alert.alert('Upload Failed', 'Could not upload logo. Try again.');
+      showStatus(false, 'Could not upload logo. Try again.');
     } finally {
       setIsUploadingLogo(false);
       setLogoUploadProgress(0);
@@ -181,9 +188,9 @@ export default function SettingsScreen() {
         churchName, tagline, location, website, contactEmail, contactPhone,
         ...(logoUrl ? { logoUrl } : {}),
       });
-      Alert.alert('Saved', 'Church settings updated successfully.');
+      showStatus(true, 'Church settings saved.');
     } catch {
-      Alert.alert('Error', 'Failed to save settings. Please try again.');
+      showStatus(false, 'Failed to save. Please try again.');
     } finally {
       setIsSaving(false);
     }
@@ -193,9 +200,9 @@ export default function SettingsScreen() {
     setIsSaving(true);
     try {
       await updateChurchSettings({ dailyDevotional, devotionalTime, prayerReminders, eventReminders });
-      Alert.alert('Saved', 'Notification settings updated.');
+      showStatus(true, 'Notification settings saved.');
     } catch {
-      Alert.alert('Error', 'Failed to save notification settings.');
+      showStatus(false, 'Failed to save. Please try again.');
     } finally {
       setIsSaving(false);
     }
@@ -205,9 +212,9 @@ export default function SettingsScreen() {
     setIsSaving(true);
     try {
       await updateChurchSettings({ currency, givingGoal: Number(givingGoal) || 0, receiptEmail });
-      Alert.alert('Saved', 'Giving settings updated.');
+      showStatus(true, 'Giving settings saved.');
     } catch {
-      Alert.alert('Error', 'Failed to save giving settings.');
+      showStatus(false, 'Failed to save. Please try again.');
     } finally {
       setIsSaving(false);
     }
@@ -217,9 +224,9 @@ export default function SettingsScreen() {
     setIsSaving(true);
     try {
       await updateChurchSettings({ defaultTranslation, moderation });
-      Alert.alert('Saved', 'Content settings updated.');
+      showStatus(true, 'Content settings saved.');
     } catch {
-      Alert.alert('Error', 'Failed to save content settings.');
+      showStatus(false, 'Failed to save. Please try again.');
     } finally {
       setIsSaving(false);
     }
@@ -241,7 +248,7 @@ export default function SettingsScreen() {
                 await updateChurchSettings({ maintenanceMode: true });
               } catch {
                 setMaintenanceMode(false);
-                Alert.alert('Error', 'Failed to enable maintenance mode.');
+                showStatus(false, 'Failed to enable maintenance mode.');
               }
             },
           },
@@ -251,7 +258,7 @@ export default function SettingsScreen() {
       setMaintenanceMode(false);
       updateChurchSettings({ maintenanceMode: false }).catch(() => {
         setMaintenanceMode(true);
-        Alert.alert('Error', 'Failed to disable maintenance mode.');
+        showStatus(false, 'Failed to disable maintenance mode.');
       });
     }
   }, []);
@@ -552,6 +559,13 @@ export default function SettingsScreen() {
         ))}
       </ScrollView>
 
+      {saveStatus && (
+        <View style={[styles.statusBanner, { backgroundColor: saveStatus.ok ? '#16A34A' : '#EF4444' }]}>
+          <Ionicons name={saveStatus.ok ? 'checkmark-circle-outline' : 'alert-circle-outline'} size={16} color="#fff" />
+          <Text style={styles.statusBannerText}>{saveStatus.msg}</Text>
+        </View>
+      )}
+
       {isLoading ? (
         <View style={styles.centerContainer}>
           <ActivityIndicator size="large" color={Colors.primary} />
@@ -820,6 +834,19 @@ const styles = StyleSheet.create({
   versionSub: {
     fontSize: FontSizes.xs,
     color: Colors.gray400,
+  },
+  statusBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing[2],
+    paddingHorizontal: Spacing[5],
+    paddingVertical: Spacing[3],
+  },
+  statusBannerText: {
+    flex: 1,
+    fontSize: FontSizes.sm,
+    color: '#fff',
+    fontWeight: FontWeights.medium,
   },
   logoPreviewWrap: {
     alignItems: 'flex-start',

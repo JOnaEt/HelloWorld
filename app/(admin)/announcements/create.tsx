@@ -7,7 +7,6 @@ import {
   TextInput,
   TouchableOpacity,
   Switch,
-  Alert,
   ActivityIndicator,
   Modal,
   FlatList,
@@ -104,6 +103,7 @@ export default function CreateAnnouncementScreen() {
   const [showTypePicker, setShowTypePicker] = useState(false);
   const [showPriorityPicker, setShowPriorityPicker] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -115,14 +115,15 @@ export default function CreateAnnouncementScreen() {
     if (result.canceled || !result.assets[0]) return;
 
     setIsUploadingImage(true);
+    setSubmitError(null);
     try {
       const tempId = Date.now().toString();
       const url = await uploadAnnouncementImage(result.assets[0].uri, tempId, (p) => {
         setImageUploadProgress(p);
       });
       setImageUrl(url);
-    } catch {
-      Alert.alert('Upload Failed', 'Could not upload image. Try again.');
+    } catch (err: any) {
+      setSubmitError(`Image upload failed: ${err?.message ?? 'Try again.'}`);
     } finally {
       setIsUploadingImage(false);
       setImageUploadProgress(0);
@@ -130,46 +131,45 @@ export default function CreateAnnouncementScreen() {
   };
 
   const handlePublish = useCallback(async (sendPush = false) => {
+    setSubmitError(null);
     if (!title.trim()) {
-      Alert.alert('Missing Field', 'Please enter a title.');
+      setSubmitError('Please enter a title.');
       return;
     }
     if (!content.trim()) {
-      Alert.alert('Missing Field', 'Please enter content.');
+      setSubmitError('Please enter content.');
       return;
     }
 
     setIsSubmitting(true);
     try {
       const now = new Date().toISOString();
-      await createAnnouncement({
+      const payload: any = {
         title: title.trim(),
         content: content.trim(),
         type,
         priority,
-        imageUrl: imageUrl.trim() || undefined,
         publishedAt: scheduleDate ? new Date(scheduleDate).toISOString() : now,
-        expiresAt: expiresAt ? new Date(expiresAt).toISOString() : undefined,
         author: {
           id: user?.uid ?? '',
           name: user?.displayName ?? 'Admin',
           title: user?.role === 'pastor' ? 'Pastor' : 'Admin',
-          photoURL: user?.photoURL ?? undefined,
+          ...(user?.photoURL ? { photoURL: user.photoURL } : {}),
         },
-        actionUrl: actionUrl.trim() || undefined,
-        actionLabel: actionLabel.trim() || undefined,
         targetGroups: [],
         isPinned,
         tags: [type],
-      });
+      };
+      if (imageUrl.trim()) payload.imageUrl = imageUrl.trim();
+      if (expiresAt.trim()) payload.expiresAt = new Date(expiresAt).toISOString();
+      if (actionUrl.trim()) payload.actionUrl = actionUrl.trim();
+      if (actionLabel.trim()) payload.actionLabel = actionLabel.trim();
 
-      const message = sendPush
-        ? 'Announcement published and push notification queued!'
-        : 'Announcement published successfully!';
-      Alert.alert('Success', message, [{ text: 'OK', onPress: () => router.back() }]);
-    } catch (err) {
+      await createAnnouncement(payload);
+      router.back();
+    } catch (err: any) {
       console.error('Create announcement error:', err);
-      Alert.alert('Error', 'Failed to publish announcement. Please try again.');
+      setSubmitError(err?.message ?? 'Failed to publish. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -319,6 +319,13 @@ export default function CreateAnnouncementScreen() {
             />
           </FormField>
         </View>
+
+        {submitError && (
+          <View style={styles.errorBanner}>
+            <Ionicons name="alert-circle-outline" size={16} color="#fff" />
+            <Text style={styles.errorBannerText}>{submitError}</Text>
+          </View>
+        )}
 
         <View style={styles.submitSection}>
           <TouchableOpacity
@@ -472,6 +479,22 @@ const styles = StyleSheet.create({
   },
   primaryBtnText: { fontSize: FontSizes.base, fontWeight: FontWeights.bold, color: Colors.white },
   disabledBtn: { opacity: 0.5 },
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing[2],
+    backgroundColor: '#EF4444',
+    borderRadius: BorderRadius.md,
+    padding: Spacing[3],
+    marginHorizontal: Spacing[5],
+    marginTop: Spacing[2],
+  },
+  errorBannerText: {
+    flex: 1,
+    fontSize: FontSizes.sm,
+    color: '#fff',
+    fontWeight: FontWeights.medium,
+  },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
