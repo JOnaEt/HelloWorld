@@ -28,24 +28,40 @@ function fromDoc(snap: DocumentSnapshot | QueryDocumentSnapshot): Devotional {
 
 export async function getDailyDevotional(): Promise<Devotional | null> {
   const todayKey = getTodayKey();
+  // Filter by isDaily only (no composite index needed), then match date client-side
   const q = query(
     collection(db, COLLECTION),
     where('isDaily', '==', true),
-    where('dailyDate', '==', todayKey),
-    limit(1)
+    limit(20)
   );
   const snap = await getDocs(q);
-  if (snap.empty) {
-    // Fall back to featured
-    return getFeaturedDevotional();
-  }
-  return fromDoc(snap.docs[0]);
+  const todayDoc = snap.docs.find((d) => d.data().dailyDate === todayKey);
+  if (todayDoc) return fromDoc(todayDoc);
+  // Fall back to featured
+  return getFeaturedDevotional();
 }
 
 export async function getFeaturedDevotional(): Promise<Devotional | null> {
+  // Filter by isFeatured only (no composite index needed), sort client-side
   const q = query(
     collection(db, COLLECTION),
     where('isFeatured', '==', true),
+    limit(20)
+  );
+  const snap = await getDocs(q);
+  if (snap.empty) {
+    // Fall back to most recent devotional of any kind
+    return getMostRecentDevotional();
+  }
+  const sorted = snap.docs
+    .map(fromDoc)
+    .sort((a, b) => (b.publishedAt > a.publishedAt ? 1 : -1));
+  return sorted[0];
+}
+
+async function getMostRecentDevotional(): Promise<Devotional | null> {
+  const q = query(
+    collection(db, COLLECTION),
     orderBy('publishedAt', 'desc'),
     limit(1)
   );
