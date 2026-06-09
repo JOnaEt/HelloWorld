@@ -1,0 +1,75 @@
+{
+  "expo": {
+    "name": "TOPIC Digital",
+    "slug": "topic-digital",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#16A34A"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.topic.digital",
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "TOPIC Digital needs microphone access for audio recording.",
+        "NSCameraUsageDescription": "TOPIC Digital needs camera access for profile photos.",
+        "NSPhotoLibraryUsageDescription": "TOPIC Digital needs photo library access for profile photos.",
+        "NSUserNotificationsUsageDescription": "TOPIC Digital uses notifications for devotional reminders and church announcements."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#16A34A"
+      },
+      "package": "com.topic.digital",
+      "permissions": [
+        "RECEIVE_BOOT_COMPLETED",
+        "VIBRATE",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "CAMERA",
+        "RECORD_AUDIO"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      "expo-image-picker",
+      "expo-document-picker",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#16A34A"
+        }
+      ],
+      [
+        "expo-av",
+        {
+          "microphonePermission": "Allow TOPIC Digital to access your microphone."
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "scheme": "topic-digital",
+    "extra": {
+      "eas": {
+        "projectId": "topic-digital-church-app"
+      },
+      "router": {
+        "origin": false
+      }
+    }
+  }
+}

@@ -1,0 +1,216 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Helpers ──────────────────────────────────────────────────────────────
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (getUserData().role == 'admin' || getUserData().role == 'pastor');
+    }
+
+    function isLeaderOrAdmin() {
+      return isAuthenticated() &&
+        (getUserData().role == 'admin' ||
+         getUserData().role == 'pastor' ||
+         getUserData().role == 'leader');
+    }
+
+    function isGroupLeader(groupId) {
+      return isAuthenticated() &&
+        exists(/databases/$(database)/documents/groups/$(groupId)/members/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/groups/$(groupId)/members/$(request.auth.uid)).data.role == 'leader';
+    }
+
+    function isGroupMember(groupId) {
+      return isAuthenticated() &&
+        exists(/databases/$(database)/documents/groups/$(groupId)/members/$(request.auth.uid));
+    }
+
+    // ── Users ─────────────────────────────────────────────────────────────────
+    match /users/{userId} {
+      // Any authenticated user can read profiles (for group discovery, prayer, etc.)
+      allow read: if isAuthenticated();
+      // Only the user can create their own profile
+      allow create: if isAuthenticated() && isOwner(userId);
+      // User can update their own profile (excluding role); admins can update any field
+      allow update: if isAuthenticated() && (
+        (isOwner(userId) &&
+         !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role'])) ||
+        isAdmin()
+      );
+      // Only admins can delete accounts
+      allow delete: if isAdmin();
+    }
+
+    // ── User Devotional Progress ───────────────────────────────────────────────
+    match /users/{userId}/devotionalProgress/{progressId} {
+      allow read, write: if isAuthenticated() && isOwner(userId);
+    }
+
+    // ── Devotional Read Progress (idempotency guard for markRead) ─────────────
+    match /devotionalProgress/{recordId} {
+      allow read, write: if isAuthenticated() &&
+        request.auth.uid == resource.data.userId;
+      allow create: if isAuthenticated() &&
+        request.auth.uid == request.resource.data.userId;
+    }
+
+    // ── Devotionals ───────────────────────────────────────────────────────────
+    match /devotionals/{devotionalId} {
+      // All authenticated members can read devotionals
+      allow read: if isAuthenticated();
+      // Only admins/pastors can create and delete
+      allow create, delete: if isAdmin();
+      // Admins can do full updates; authenticated users can increment counters only
+      allow update: if isAdmin() || (
+        isAuthenticated() &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['listenCount', 'readCount', 'shareCount'])
+      );
+    }
+
+    // ── Groups ────────────────────────────────────────────────────────────────
+    match /groups/{groupId} {
+      allow read: if isAuthenticated();
+      allow create: if isLeaderOrAdmin();
+      allow update: if isGroupLeader(groupId) || isAdmin();
+      allow delete: if isAdmin();
+
+      match /members/{memberId} {
+        allow read: if isGroupMember(groupId) || isAdmin();
+        allow create: if isAuthenticated() && isOwner(memberId);
+        allow update: if isGroupLeader(groupId) || isAdmin();
+        allow delete: if isOwner(memberId) || isGroupLeader(groupId) || isAdmin();
+      }
+
+      match /announcements/{announcementId} {
+        allow read: if isGroupMember(groupId) || isAdmin();
+        allow write: if isGroupLeader(groupId) || isAdmin();
+      }
+
+      match /discussions/{discussionId} {
+        allow read: if isGroupMember(groupId) || isAdmin();
+        allow create: if isGroupMember(groupId);
+        allow update: if isAuthenticated() && (
+          request.auth.uid == resource.data.authorId ||
+          isGroupLeader(groupId) || isAdmin()
+        );
+        allow delete: if isAuthenticated() && (
+          request.auth.uid == resource.data.authorId ||
+          isGroupLeader(groupId) || isAdmin()
+        );
+      }
+
+      match /attendance/{attendanceId} {
+        allow read: if isGroupMember(groupId) || isAdmin();
+        allow write: if isGroupLeader(groupId) || isAdmin();
+      }
+    }
+
+    // ── Prayer Requests ───────────────────────────────────────────────────────
+    match /prayerRequests/{prayerId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && (
+        isOwner(resource.data.userId) || isAdmin()
+      );
+      allow delete: if isAuthenticated() && (
+        isOwner(resource.data.userId) || isAdmin()
+      );
+    }
+
+    // ── Group Members (flat collection) ───────────────────────────────────────
+    match /groupMembers/{memberId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow delete: if isAuthenticated();
+    }
+
+    // ── Group Attendance (flat collection) ────────────────────────────────────
+    match /groupAttendance/{attendanceId} {
+      allow read: if isAuthenticated();
+      allow write: if isLeaderOrAdmin();
+    }
+
+    // ── Listened Records (devotional audio progress) ───────────────────────────
+    match /listenedRecords/{recordId} {
+      allow read, write: if isAuthenticated() &&
+        request.auth.uid == resource.data.userId;
+      allow create: if isAuthenticated() &&
+        request.auth.uid == request.resource.data.userId;
+    }
+
+    // ── Church Announcements ──────────────────────────────────────────────────
+    match /announcements/{announcementId} {
+      allow read: if isAuthenticated();
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin() || (
+        isAuthenticated() &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['readByUserIds'])
+      );
+    }
+
+    // ── Donations ─────────────────────────────────────────────────────────────
+    match /donations/{donationId} {
+      allow read: if isAuthenticated() && (
+        isOwner(resource.data.userId) || isAdmin()
+      );
+      allow create: if isAuthenticated() && isOwner(request.resource.data.userId);
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // ── Bible Reading Progress ────────────────────────────────────────────────
+    match /readingProgress/{userId} {
+      allow read, write: if isAuthenticated() && isOwner(userId);
+    }
+
+    // ── Reading Plans ─────────────────────────────────────────────────────────
+    match /readingPlans/{planId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // ── Leaderboards (written only by Cloud Functions) ────────────────────────
+    match /leaderboards/{leaderboardId} {
+      allow read: if isAuthenticated();
+      allow write: if false;
+    }
+
+    // ── Notifications ─────────────────────────────────────────────────────────
+    match /notifications/{userId}/items/{notificationId} {
+      allow read, write: if isAuthenticated() && isOwner(userId);
+    }
+
+    // ── Push Tokens ───────────────────────────────────────────────────────────
+    match /pushTokens/{userId} {
+      allow read, write: if isAuthenticated() && (isOwner(userId) || isAdmin());
+    }
+
+    // ── Church Settings ───────────────────────────────────────────────────────
+    match /churchSettings/{settingId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // ── Analytics Events (write-only for users) ───────────────────────────────
+    match /analytics/{eventId} {
+      allow create: if isAuthenticated();
+      allow read: if isAdmin();
+    }
+  }
+}
